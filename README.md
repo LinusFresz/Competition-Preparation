@@ -26,8 +26,10 @@ Files that need to be in the same folder:
 - scoresheets_second_rounds.py
 - chromedriver_data.py
 - chromedriver (http://chromedriver.chromium.org/downloads)
-- Trebuchet.ttf (TrueType font, https://www.fontpalace.com/font-download/Trebuchet+MS/)
+- Trebuchet.ttf ([TrueType font](https://www.fontpalace.com/font-download/Trebuchet+MS/))
     
-Please be aware that you need a WCA database connection. All necessary files can be found here: https://github.com/LinusFresz/python-WCA (section 'setup') 
+Please be aware that you need a WCA database connection. All necessary files can be found here: [/LinusFresz/python-WCA](https://github.com/LinusFresz/python-WCA) (section 'setup') 
     
+A precompiled version can be found here: [Google Drive](https://drive.google.com/drive/folders/1ZNBX43MzM5jKLJOeDsSuLcwJqiyEOU1d?usp=sharing). 
+
 For further details and support, please contact Linus Frész, linuf95@gmail.com
