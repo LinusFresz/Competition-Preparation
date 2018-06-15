@@ -7,6 +7,7 @@ This script creates various things a organizer might need for a competition:
 - scrambling list for all events and rounds (except FMC)
 - nametags
 - scoresheets for first rounds
+- scoresheets for succeeding rounds once the results are uploaded to cubecomps.com
     
 ### System information: 
 This script was tested on Mac OS 10.13.4 with python 3.5.2
