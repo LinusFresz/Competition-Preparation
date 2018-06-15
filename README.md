@@ -23,6 +23,7 @@ Files that need to be in the same folder:
 - nametags.py
 - scoresheets.py
 - scoresheets_second_rounds.py
+- chromedriver_data.py
 - chromedriver
     
 Please be aware that you need a WCA database connection. All necessary files can be found here: https://github.com/LinusFresz/python-WCA (section 'setup') 
