@@ -13,6 +13,7 @@ Create scoresheets for all first rounds of the competition. Information that can
     - possible cumulative limits
 '''
 
+import ftfy
 import labels
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import registerFont, stringWidth
@@ -92,14 +93,13 @@ def write_scoresheets(label, width, height, name):
     registration_id = ''
     for person in competitor_information:
         if name[2]:
-            if name[1] == person['country'] and name[2] == person['personId']:
+            if name[2] == person['personId']:
                 comp_name = person['name']
                 registration_id = str(person['registration_id'])
         else:
-            if name[1] == person['country'] and name[0][0] == person['name'][0]:
+            if name[1] == person['country'] and ftfy.fix_text(name[0]) == person['name']:
                 comp_name = person['name']
                 registration_id = str(person['registration_id'])
-
     font_size = 13
     name_width = stringWidth(comp_name, 'Arial', font_size)    
     while name_width > 140:
@@ -109,7 +109,6 @@ def write_scoresheets(label, width, height, name):
     r = shapes.String(45,height-80, comp_name, fontName='Arial')
     r.fontSize = font_size
     label.add(r)
-
     if not comp_name:
         label.add(shapes.String(10, height-80, 'Name:', fontSize=12, fontName='Arial'))
         label.add(shapes.Line(45, height-80, 160,height-80, trokeColor=colors.black))

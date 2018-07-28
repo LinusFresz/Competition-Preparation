@@ -11,15 +11,7 @@ from reportlab.graphics import shapes
 from reportlab.lib import colors
 from information_analysis import *
 
-# select font depending on registration-file format (to avoid errors with special characters) 
-if wca_info:
-    registerFont(TTFont('Arial', 'Trebuchet.ttf'))
-else:
-    if os.path.exists('STIXGeneral.ttf'):
-        registerFont(TTFont('Arial', 'STIXGeneral.ttf'))
-    else:
-        print('TrueType font Trebuchet (Trebuchet.ttf) not found, used Arial instead.')
-        registerFont(TTFont('Arial', 'Arial.ttf'))
+registerFont(TTFont('Arial', 'Trebuchet.ttf'))
 
 # format information for nametags: usual DIN-A4 layout with 2 rows of 4 nametags each with a size of 85x55mm
 specs = labels.Specification(210, 297, 2, 4, 85, 55)
