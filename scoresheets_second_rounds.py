@@ -6,12 +6,6 @@ Note that you can only create scoresheets for one round at a time.
 '''
 
 import labels
-'''
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase.pdfmetrics import registerFont, stringWidth
-from reportlab.graphics import shapes
-from reportlab.lib import colors
-'''
 from scoresheets_functions import *
 from information_analysis import *
 
