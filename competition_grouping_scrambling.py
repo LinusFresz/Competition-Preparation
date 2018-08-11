@@ -3,7 +3,7 @@
 import random
 import labels
 from information_analysis import *
-from nametags import write_name, specs
+from nametags import *
 from scoresheets_second_rounds import *
 
 error_messages = {}
@@ -137,12 +137,12 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
                         new_scrambler = unicodedata.normalize('NFKD', ranking[rank][0])
                         scramblerlist[scrambler].append(new_scrambler)
 
-                    if loop_counter % 1000 == 0:
+                    if loop_counter % 10000 == 0:
                         last_place += 5
                         if last_place > max_competitors:
                             last_place = max_competitors
                 
-                        if loop_counter == 10000:
+                        if loop_counter == 100000:
                             repeat_selectscrambler(event, round_number, round_id, scrambler_count, groups)
                             break
                     loop_counter += 1
@@ -306,39 +306,39 @@ for event in ('333', '444', '555', 'minx', 'sq1'):
 for event in ('555', '666', '777', 'clock'):
     scrambler_count_list.update({event: 5})
 
-for rounds in group_list:
-    event = rounds[0]
-    round_name = rounds[1]
-    round_number = int(rounds[1][-1:])
-    groups = rounds[2]
+if new_creation:
+    for rounds in group_list:
+        event = rounds[0]
+        round_name = rounds[1]
+        round_number = int(rounds[1][-1:])
+        groups = rounds[2]
     
-    if round_number == round_counter[event]:
-        replace_string = ' Round ' + str(round_number)
-        if round_number == 3 and round_counter[event] != 3:
-            round_name = round_name.replace(replace_string, ' Semi Final')
+        if round_number == round_counter[event]:
+            replace_string = ' Round ' + str(round_number)
+            if round_number == 3 and round_counter[event] != 3:
+                round_name = round_name.replace(replace_string, ' Semi Final')
+            else:
+                round_name = round_name.replace(replace_string, ' Final')
+
+        if groups > 1:
+            competitor_count = competitors_per_event(registration_list, column_ids[event])
+            top_scrambler = int(round(0.5 * competitor_count, 0))
+            min_scrambler = 0
         else:
-            round_name = round_name.replace(replace_string, ' Final')
+            min_scrambler = 12
+            if top_scrambler < 12:
+                top_scrambler = competitors_per_event(registration_list, column_ids[event])
 
-    if groups > 1:
-        competitor_count = competitors_per_event(registration_list, column_ids[event])
-        top_scrambler = int(round(0.5 * competitor_count, 0))
-        min_scrambler = 0
-    else:
-        min_scrambler = 12
-        if top_scrambler < 12:
-            top_scrambler = competitors_per_event(registration_list, column_ids[event])
-
-    selectscrambler(event, round_number, round_name, scrambler_count_list[event], min_scrambler, top_scrambler, groups, 1)
+        selectscrambler(event, round_number, round_name, scrambler_count_list[event], min_scrambler, top_scrambler, groups, 1)
 
 
-print('Grouping and scrambling done.')
-print('Saving files...')
+    print('Grouping and scrambling done.')
+    print('Saving files...')
 
 # Add columns for events with < 5 scramblers
-for k in range(0, len(scramblerlist)):
-    while len(scramblerlist[k]) < 7:
-        scramblerlist[k].append('dummy name')
-
+    for k in range(0, len(scramblerlist)):
+        while len(scramblerlist[k]) < 7:
+            scramblerlist[k].append('dummy name')
 
 ### Save results to files ###
 # Write grouping and scrambling in separate files
@@ -348,10 +348,40 @@ output_grouping = competition_name + '/grouping.csv'
 
 os.remove(wcif_file.name)
 
+competitor_information_nametags = sorted(competitor_information, key=lambda x: x['name'])
+result_string_nametags = sorted(result_string, key=lambda x: x[0])
+
 sheet = labels.Sheet(specs, write_name, border=True)
-sheet.add_labels(name for name in competitor_information)
+sheet.add_labels(name for name in competitor_information_nametags)
 nametag_file = competition_name + '/' + competition_name_stripped + '-nametags.pdf'
 sheet.save(nametag_file)
+
+if len(result_string_nametags) % 2 == 1:
+    result_string_nametags.append(('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',),)
+for person in range(0, len(result_string_nametags)):
+    if person % 2 == 0:
+        swapping_id = person + 1
+        swapping_person = result_string_nametags[swapping_id]
+        result_string_nametags[swapping_id] = result_string_nametags[person]
+        result_string_nametags[person] = swapping_person
+
+sheet = labels.Sheet(specs, write_grouping, border=True)
+sheet.add_labels((name, result_string_nametags, event_ids, scramblerlist) for name in result_string_nametags)
+grouping_nametag_file = competition_name + '/' + competition_name_stripped + '-nametags-grouping.pdf'
+sheet.save(grouping_nametag_file)
+
+if two_sided_nametags:
+    pdf_splitter(grouping_nametag_file)
+    pdf_splitter(nametag_file)
+
+    paths1 = glob.glob(competition_name + '/' + competition_name_stripped + '-nametags_*.pdf')
+    paths2 = glob.glob(competition_name + '/' + competition_name_stripped + '-nametags-grouping_*.pdf')
+    paths = paths1 + paths2
+    paths = sorted(paths, key=lambda x: x.split('_')[2])
+
+    merger(nametag_file, paths)
+    os.remove(grouping_nametag_file)
+
 
 for file_name in (output_registration, output_scrambling, output_grouping):
     if os.path.exists(file_name):

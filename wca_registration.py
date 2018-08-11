@@ -11,10 +11,11 @@ def quit_programm():
     sys.exit()
 
 # Error handling for WCA website login errors
-def error_handling_wcif(driver, competition_page, competition_name, store_file):
+def error_handling_wcif(driver, competition_name, store_file):
+    competition_page = driver.find_element_by_xpath('html').text
     if 'Not logged in' in competition_page:
         print('ERROR!!')
-        print('While logging into WCA website, either WCA ID or password was wrong. Aborted script')
+        print('While logging into WCA website, either WCA ID or password was wrong. Aborted script, please retry.')
         quit_programm()
     elif 'Competition with id' in competition_page:
         print('ERROR!!')
@@ -97,7 +98,7 @@ def get_wca_info(wca_id, wca_password, competition_name, competition_name_stripp
     wcif_file = competition_name + '/wcif_information.txt'
     
     # Error handling for wrong WCA website information and file-save if successful information fetch
-    error_handling_wcif(driver, file, competition_name, wcif_file)
+    error_handling_wcif(driver, competition_name, wcif_file)
 
     driver.close()
     driver.quit()

@@ -33,15 +33,31 @@ from wca_registration import *
     For further details and support, please contact Linus Frész, linuf95@gmail.com
 '''
 
+blank_sheets = False
+create_only_nametags = False
+new_creation = False
+reading_scrambling_list_from_file = False
+two_sided_nametags = True
 
 while True:
-    program_type = input('Competition preparation (1) or scoresheets for second rounds (2)? ')
+    print('Please select: ')
+    print('1. Competition preparation (grouping, scrambling, scoresheets, nametags, registration file)')
+    print('2. Scoresheets for second rounds')
+    print('3. Blank scoresheets')
+    print('4. Nametags (currently not working)')
+    program_type = input('')
     print('')
     if program_type.isdigit() and program_type == '1':
         new_creation = True
         break
     elif program_type.isdigit() and program_type == '2':
-        new_creation = False
+        break
+    elif program_type.isdigit() and program_type == '3':
+        blank_sheets = True
+        break
+    elif program_type.isdigit() and program_type == '4':
+        create_only_nametags = True
+        reading_scrambling_list_from_file = True
         break
     else:
         print("Wrong input, please enter '1' or '2'.")
@@ -49,8 +65,24 @@ while True:
 
 # Get necessary information for new competition
 if new_creation:
+    bool = True
     wca_info = wca_registration_system()
-    wca_id, wca_password, competition_name, competition_name_stripped, wcif_file = wca_registration(new_creation)
+    wca_id, wca_password, competition_name, competition_name_stripped, wcif_file = wca_registration(bool)
+    print('Create two-sided nametags? (grouping and scrambling information on the back) (y/n)')
+    while True:
+        two_sided = input('')
+        if two_sided.upper() in ('N', 'Y'):
+            break
+        else:   
+            print("Wrong input, please enter 'y' or 'n'.")
+            print('')
+
+    if two_sided.upper() == 'Y':
+        print('Using WCA registration and event information.')
+        two_sided_nametags = True
+    else:
+        two_sided_nametags = False
+        
     file_name, file_name_csv, file_name_txt = competition_information_fetch(wca_info)
     
     store_file = competition_name + '/' + competition_name_stripped + '-grouping.txt'
@@ -58,7 +90,10 @@ if new_creation:
     
     print('Saved results, extracting data now.')  
 
-# Get necessary information for scoresheets of a succeeding round
+elif blank_sheets:
+    competition_name = input('Competition name: (leave empty if not wanted) ')
+    
+
 else:
     cubecomps_id = input('Link to previous round: ')
     advancing_competitors = int(input('Number of advancing competitors: '))
