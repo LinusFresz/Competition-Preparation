@@ -5,9 +5,10 @@ I've done my work with developing a competition preparation script, here you can
 This script creates various things a organizer might need for a competition:
 - competitor groupings
 - scrambling list for all events and rounds (except FMC)
-- nametags
+- nametags (with the option to print scrambling and grouping on the back of the scoresheets)
 - scoresheets for first rounds
 - scoresheets for succeeding rounds once the results are uploaded to cubecomps.com
+- blank scoresheets
     
 ### System information: 
 This script was tested on Mac OS 10.13.4 with python 3.5.2
@@ -24,12 +25,13 @@ Files that need to be in the same folder:
 - nametags.py
 - scoresheets.py
 - scoresheets_second_rounds.py
+- scoresheets_functions.py
 - chromedriver_data.py
 - chromedriver (http://chromedriver.chromium.org/downloads)
 - Trebuchet.ttf ([TrueType font](https://www.fontpalace.com/font-download/Trebuchet+MS/))
     
 Please be aware that you need a WCA database connection. All necessary files can be found here: [/LinusFresz/python-WCA](https://github.com/LinusFresz/python-WCA) (section 'setup') 
     
-A precompiled version can be found here: [Google Drive](https://drive.google.com/drive/folders/1ZNBX43MzM5jKLJOeDsSuLcwJqiyEOU1d?usp=sharing). 
+A precompiled version can be found here: [Google Drive](https://drive.google.com/drive/folders/1ZNBX43MzM5jKLJOeDsSuLcwJqiyEOU1d?usp=sharing) (IMPORTANT: **OUTDATED**). Please use the contact address below to get an up-to-date version. 
 
 For further details and support, please contact Linus Frész, linuf95@gmail.com
