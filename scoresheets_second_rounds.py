@@ -6,31 +6,23 @@ Note that you can only create scoresheets for one round at a time.
 '''
 
 import labels
+'''
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import registerFont, stringWidth
 from reportlab.graphics import shapes
 from reportlab.lib import colors
+'''
+from scoresheets_functions import *
 from information_analysis import *
 
 
-if wca_info:
-    registerFont(TTFont('Arial', 'Trebuchet.ttf'))
-else:
-    if os.path.exists('STIXGeneral.ttf'):
-        registerFont(TTFont('Arial', 'STIXGeneral.ttf'))
-    else:
-        print('TrueType font Trebuchet (Trebuchet.ttf) not found, used Arial instead.')
-        registerFont(TTFont('Arial', 'Arial.ttf'))
-
+registerFont(TTFont('Arial', 'Trebuchet.ttf'))
 
 # format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
 specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
 
 # Creation of scoresheets
-def write_scoresheets(label, width, height, name):
-    # Competition name
-    label.add(shapes.String(10, height-16, competition_name, fontSize=10, fontName='Arial'))
-    
+def write_scoresheets(label, width, height, name):    
     # WCA ID
     if name['name'] and not name['personId']:
         id = 'New Competitor'
@@ -117,8 +109,9 @@ def write_scoresheets(label, width, height, name):
     label.add(shapes.String(width-22, height-80, ranking, fontSize=12, fontName='Arial'))
 
     if not comp_name:
-        label.add(shapes.String(10, height-80, 'Name:', fontSize=12, fontName='Arial'))
-        label.add(shapes.Line(45, height-80, 160,height-80, trokeColor=colors.black))
+        scoresheet_blank_header(label, height, width, competition_name)
+    else:
+        label.add(shapes.String(10, height-16, competition_name, fontSize=10, fontName='Arial'))
 
     if registration_id:
         while len(registration_id) < 3:
@@ -126,93 +119,61 @@ def write_scoresheets(label, width, height, name):
         label.add(shapes.Rect(10,height-83,22, 15, fillColor=colors.white))
         label.add(shapes.String(14, height-79, registration_id, fontSize=10, fontName='Arial'))
 
-
     # Making header for result-boxes: # attempt, result (with (cumulative) limits), judge and competitor signature
-    ### Depending on the length of the 'limit' string (which includes (cumulative) limits), the box height gets choosen
-    if stringWidth(limit, 'Arial', font_size_limit) > 150:
-        box_height = 15
-    else:
-        box_height = 0
-    label.add(shapes.Rect(10,height-105-box_height,30, 15+box_height, fillColor=colors.white))
-    label.add(shapes.String(12,height-100-box_height/2.0,'Attempt',fontSize=7, fontName='Arial'))
-    label.add(shapes.Rect(210,height-105-box_height,30, 15+box_height, fillColor=colors.white))
-    label.add(shapes.String(215,height-100-box_height/2.0,'Judge',fontSize=8, fontName='Arial'))
-    label.add(shapes.Rect(245,height-105-box_height,30, 15+box_height, fillColor=colors.white))
-    label.add(shapes.String(250,height-100-box_height/2.0,'Comp',fontSize=8, fontName='Arial'))
-    
-    if stringWidth(limit, 'Arial', font_size_limit) > 150:
-        label.add(shapes.Rect(45,height-120,160, 30, fillColor=colors.white))
-        label.add(shapes.String(49,height-100,limit[:40], fontSize=font_size_limit, fontName='Arial'))
-        label.add(shapes.String(49,height-115,limit[41:], fontSize=font_size_limit, fontName='Arial'))
-        height = height - 15
-    else:
-        label.add(shapes.Rect(45,height-105,160, 15, fillColor=colors.white))
-        label.add(shapes.String(49,height-100,limit, fontSize=font_size_limit, fontName='Arial'))
+    limit_width = stringWidth(limit, 'Arial', font_size_limit)
+    scoresheet_results_header(label, limit, limit_width, font_size_limit, height)
 
     # Creation of result boxes, depending on # of attempts for event and round
-    height = height - 105
-    number = 1
-    for k in range(0,format):
-        height -= 35
-        label.add(shapes.Rect(10,height,30, 30, fillColor=colors.white))
-        label.add(shapes.String(22,height+10,str(number),fontSize=12, fontName='Arial'))
-        label.add(shapes.Rect(45,height,160, 30, fillColor=colors.white))
-        label.add(shapes.Rect(210,height,30, 30, fillColor=colors.white))
-        label.add(shapes.Rect(245,height,30, 30, fillColor=colors.white))
-        
-        # Special treatment for 3x3x3 Multi-Blindfolded: additional info in result boxes
-        if event_2 == '333mbf':
-            label.add(shapes.Line(50, height+8, 72, height+8,trokeColor=colors.black))
-            label.add(shapes.String(74,height+10,'out of',fontSize=10, fontName='Arial'))
-            label.add(shapes.Line(100, height+8, 125, height+8,trokeColor=colors.black))
-            label.add(shapes.String(125,height+10,'  Time:',fontSize=10, fontName='Arial'))
-            label.add(shapes.Line(156, height+8, 200, height+8,trokeColor=colors.black))
+    height = scoresheet_result_boxes(label, height, format, event, cutoff_number, name)
     
-        # Add cutoff information (if there are any)
-        if cutoff_number == number and name['name']:
-            if cutoff_number == 1: 
-                cutoff = 'Continue if Attempt 1 is below ' + cutoff_time
-                indent = 70
-            else:
-                cutoff = 'Continue if Attempt 1 or Attempt 2 is below ' + cutoff_time
-                indent = 93
-            label.add(shapes.Line(10,height-13,width/2.0-indent,height-13,trokeColor=colors.black,strokeWidth=1,strokeDashArray=[2,2])) 
-            label.add(shapes.Line(width/2+indent,height-13,width-10,height-13,trokeColor=colors.black,strokeWidth=1,strokeDashArray=[2,2])) 
-            label.add(shapes.String(width/2.0,height-15,cutoff,fontSize=8,textAnchor='middle', fontName='Arial'))
-            height -= 20
-        number+= 1
+    # Add unlabelled box for extras and provisional solves
+    scoresheet_extra(label, height, width)
     
-    # Add unlabeled box for extras and provisional solves 
-    label.add(shapes.Line(10,height-13,width/2.0-50,height-13,trokeColor=colors.black,strokeWidth=1,strokeDashArray=[2,2])) 
-    label.add(shapes.Line(width/2+50,height-13,width-10,height-13,trokeColor=colors.black,strokeWidth=1,strokeDashArray=[2,2])) 
-    label.add(shapes.String(width/2.0,height-15,'Extra or Provisional Solve',fontSize=8,textAnchor='middle', fontName='Arial'))
-    label.add(shapes.Rect(10,height-55,30, 30, fillColor=colors.white))
-    label.add(shapes.Rect(45,height-55,160, 30, fillColor=colors.white))
-    label.add(shapes.Rect(210,height-55,30, 30, fillColor=colors.white))
-    label.add(shapes.Rect(245,height-55,30, 30, fillColor=colors.white))
+def write_blank_sheets(label, width, height, name):    
+
+    scoresheet_blank_header(label, height, width, competition_name)
+    
+    scoresheet_results_header(label, '', 0, 10, height)
+
+    # Creation of result boxes, depending on # of attempts for event and round
+    height = scoresheet_result_boxes(label, height, 5, '', 0, name)
+    
+    # Add unlabeled box for extras and provisional solves
+    scoresheet_extra(label, height, width) 
 
 # Loop to create scoresheets for this round
 if not new_creation:
-    print('Creating scoresheets for ' + event_round_name + '...')
-    sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)
-    scoresheet_list = []
-    counter = 0
-    for name in competitor_information:
-        scoresheet_list.append(name)
-        counter += 1
-
-    scoresheet_list = sorted(scoresheet_list, key=lambda x: x['ranking'])
-
-    # Fill empty pages with blank scoresheets
-    if (advancing_competitors % 4) != 0:
-        for filling in range(0,4-counter%4):
+    if blank_sheets:
+        scoresheet_list = []
+        sheet = labels.Sheet(specs_scoresheets, write_blank_sheets, border=False)
+        scoresheet_file = 'Blank_Scoresheets.pdf'
+        print('Creating blank sheets')
+        for scoresheet_count in range(0, 4):
             scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
+        sheet.add_labels(name for name in scoresheet_list)
+        sheet.save(scoresheet_file)
+    else:
+        print('Creating scoresheets for ' + event_round_name + '...')
+        sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)
+        scoresheet_list = []
+        counter = 0
+        for name in competitor_information:
+            scoresheet_list.append(name)
+            counter += 1
 
-    # Create scoresheets
-    sheet.add_labels(name for name in scoresheet_list)
-    scoresheet_file = competition_name + '/' + 'Scoresheets' +event_round_name + '.pdf'
-    sheet.save(scoresheet_file)
+        scoresheet_list = sorted(scoresheet_list, key=lambda x: x['ranking'])
+
+        # Fill empty pages with blank scoresheets
+        if (advancing_competitors % 4) != 0:
+            for filling in range(0,4-counter%4):
+                scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
+                
+        # Create scoresheets
+        sheet.add_labels(name for name in scoresheet_list)
+        scoresheet_file = competition_name + '/' + 'Scoresheets' + event_round_name + '.pdf'
+        sheet.save(scoresheet_file)
     
-    print('')
-    print('Scoresheets for ' + event_round_name + ' sucessfully saved in folder ' + competition_name + '.')
+        print('')
+        print('Scoresheets for ' + event_round_name + ' sucessfully saved in folder ' + competition_name + '.')
+        os.remove(wcif_file.name)
     sys.exit()
