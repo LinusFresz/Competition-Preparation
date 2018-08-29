@@ -1,10 +1,3 @@
-'''import labels
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase.pdfmetrics import registerFont, stringWidth
-from reportlab.graphics import shapes
-from reportlab.lib import colors
-'''
-
 from wca_registration import *
 
 def scoresheet_results_header(label, limit, limit_width, font_size_limit, height):
