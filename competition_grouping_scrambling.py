@@ -1,17 +1,27 @@
 #!/usr/bin/python
 
-import random
-import labels
 from information_analysis import *
-from nametags import *
-from scoresheets_second_rounds import *
+from scoresheets_functions import *
+
+# format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
+
+if blank_sheets:
+    create_blank_sheets(write_blank_sheets, competition_name)
+    
+if create_scoresheets_second_rounds_bool:
+    create_scoresheets_second_rounds(write_scoresheets_second_round, competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, event)
 
 error_messages = {}
 
+scramblerlist, result_string, scramblerlist_sorted_by_schedule = [], [], []
+rowcount = 3
+
+event_ids = {'333': 999, '222': 999, '444': 999, '555': 999, '666': 999, '777': 999, '333bf': 999, '333fm': 999, '333oh': 999, '333ft': 999, 'minx': 999, 'pyram': 999, 'clock': 999, 'skewb': 999, 'sq1': 999, '444bf': 999, '555bf': 999, '333mbf': 999} 
+
 def competitors_per_event(grouping_list, event_column):
     event_count = 0
-    for k in grouping_list:
-        if k[event_column] == '1':
+    for grouping_id in grouping_list:
+        if grouping_id[event_column] == '1':
             event_count += 1
     return event_count
 
@@ -20,50 +30,48 @@ def grouping(registration_list, groups, event_column):
     event_count = competitors_per_event(registration_list, event_column)
 
     group_size = round(event_count / groups, 0)  # Average number of competitors per group
-    l = 1
-    m = 0  # Count of groups
+    actual_group_size = 1
+    group_number = 0
     counter = 0
-    for k in range(0, len(registration_list)):
-        if registration_list[k][event_column] == '1':
-            if (l - 1) % group_size == 0:
-                m += 1
-                if m > groups:
-                    m -= 1
-            result_string[counter] += (m,)  # Adding group number for competitors
-            l += 1
+    for person in range(0, len(registration_list)):
+        if registration_list[person][event_column] == '1':
+            if (actual_group_size - 1) % group_size == 0:
+                group_number += 1
+                if group_number > groups:
+                    group_number -= 1
+            result_string[counter] += (group_number,)  # Adding group number for competitors
+            actual_group_size += 1
         else:
             result_string[counter] += ('',)  # Leaving group empty if competitor doesn't compete
         counter += 1
 
 
 ### Collects all rankings from SQL-string for choosen event ###
-def get_event_results(event_ranking, rows, event):
-    for k in rows:
-        if event == k['eventId']:
-            event_ranking.append(k)
+def get_event_results(event_ranking, ranking_single, event):
+    for ranked_competitor in ranking_single:
+        if event == ranked_competitor['eventId']:
+            event_ranking.append(ranked_competitor)
 
 
 ### Selects correct ranking for choosen event ###
 def rankings(event_ranking, result_string, ranking, event):
-    get_event_results(event_ranking, rows, event)
-    for k in range(0, len(result_string)):
+    get_event_results(event_ranking, ranking_single, event)
+    for person in range(0, len(result_string)):
         true = 0
-        for l in event_ranking:
-            if result_string[k][2] == l['personId']:
-                if result_string[k][event_ids[event]]:
-                    ranking[k] += (l['best'],)
+        for person_event in event_ranking:
+            if result_string[person][2] == person_event['personId']:
+                if result_string[person][event_ids[event]]:
+                    ranking[person] += (person_event['best'],)
                     true = 1
                     break
         if not true:
-            ranking[k] += (99999,)
+            ranking[person] += (99999,)
 
 
 ### Create new string for grouping and add name + DOB ###
-result_string = []
-
-for k in registration_list:
-    result_string.append((k[1], k[2], k[3]))
-
+if registration_list:
+    for person in registration_list:
+        result_string.append((person[1], person[2], person[3]))
 
 def repeat_selectscrambler(event, round_number, round_id, scrambler_count, groups):
     error_string = 'ERROR!! Not enough scramblers found for ' + event + ', ' + round_id
@@ -73,12 +81,6 @@ def repeat_selectscrambler(event, round_number, round_id, scrambler_count, group
         selectscrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2)
     error_messages.update({error_string_id: error_string})
 
-
-scramblerlist = []
-rowcount = 3  # first column with grouping-data
-
-event_ids = {'333': 999, '222': 999, '444': 999, '555': 999, '666': 999, '777': 999, '333bf': 999, '333fm': 999, '333oh': 999, '333ft': 999, 'minx': 999, 'pyram': 999, 'clock': 999, 'skewb': 999, 'sq1': 999, '444bf': 999, '555bf': 999, '333mbf': 999} 
-
 ### Select scramblers for each group and creates grouping ###
 def selectscrambler(event, round_number, round_id, scrambler_count, first_place, last_place, groups, scrambling_run_id):
     global rowcount
@@ -86,21 +88,15 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
     event_ranking = []
     loop_counter = 1
 
-    if event not in event_ids:
-        error_string = 'ERROR!! Event ' + event + ', ' + round_id, ' does not exist. Please choose correct Event-Id.'
-        error_string_id = event + round_id
-        error_messages.update({error_string_id: error_string})
-        return
-
     # Adds correct columnid for events AND creates grouping for first rounds
     if round_number == 1:
         if scrambling_run_id == 1:
             event_ids.update({event: rowcount})
-        grouping(registration_list, groups, column_ids[event])
-        rowcount += 1
+            grouping(registration_list, groups, column_ids[event])
+            rowcount += 1
 
-    for k in registration_list:
-        ranking.append((k[1], k[3]))
+    for person in registration_list:
+        ranking.append((person[1], person[3]))
     
     if scrambling_run_id == 2:
         rankings(event_ranking, result_string, ranking, event[:3])
@@ -132,7 +128,7 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
                     rank = random.randint(first_place, last_place)
 
                     not_double = checking(ranking, event_ids, event, groups, rank, group_number, round_number, scrambler, first_place, last_place, scrambling_run_id)
-
+                    
                     if not_double:
                         new_scrambler = unicodedata.normalize('NFKD', ranking[rank][0])
                         scramblerlist[scrambler].append(new_scrambler)
@@ -153,8 +149,8 @@ def scrambling_average(personId):
     scramble_count_person = 0
     for persons in result_string:
         scramble_count = 0
-        for k in scramblerlist:
-            if persons[0] in k:
+        for scrambler in scramblerlist:
+            if persons[0] in scrambler:
                 scramble_count += 1
         if persons[2] == personId:
             scramble_count_person = scramble_count
@@ -186,21 +182,21 @@ def scrambling_average(personId):
 # - Special conditions if in previous run not enough scramblers were found (scrambling_run_id == 2):
 # - competitor does not compete in event (i.e. persons from 3x3x3 get selected for 3x3x3 Blindfolded)
 def checking(ranking, event_ids, event, groups, rank, group_number, round_number, scrambler, first_place, last_place, scrambling_run_id):
-    
+
     if scrambling_run_id == 2:
         previous_event = event
         event = event[:3]
     
     if ranking[rank][2] == 99999:
         return 0
-    
-    for m in range(0, len(scramblerlist[scrambler])):
-        if ranking[rank][0] == scramblerlist[scrambler][m]:
+
+    for scrambling_place in range(2, len(scramblerlist[scrambler])):
+        if ftfy.fix_text(ranking[rank][0]) == ftfy.fix_text(scramblerlist[scrambler][scrambling_place]):
             return 0  
     
-    for m in competition_count:
-        if ranking[rank][1] == m['personId']:
-            if m['companzahl'] < 5:
+    for counts in competition_count:
+        if ranking[rank][1] == counts['personId']:
+            if counts['companzahl'] < 5:
                 return 0   
 
     if round_number != 1 and round_number != round_counter[event]:
@@ -224,17 +220,17 @@ def checking(ranking, event_ids, event, groups, rank, group_number, round_number
                 if role.upper() in person['role']:
                     return 0 
 
-    for k in result_string:            
-        if k[2] == ranking[rank][1]:
+    for person in result_string:            
+        if person[2] == ranking[rank][1]:
             if scrambling_run_id == 2:
-                if k[event_ids[previous_event]]:
+                if person[event_ids[previous_event]]:
                     return 0
                 else:
                     return 1
         
-            if not k[event_ids[event]]:         
+            if not person[event_ids[event]]:         
                 return 0
-            if k[event_ids[event]] == group_number and round_number in (1, round_counter[event]):
+            if person[event_ids[event]] == group_number and round_number in (1, round_counter[event]):
                 return 0
 
     average = scrambling_average(ranking[rank][1])
@@ -243,58 +239,52 @@ def checking(ranking, event_ids, event, groups, rank, group_number, round_number
 
     return 1
 
-
 ### Selection of necessary information from WCA database export. Information include: ###
 # - Rankings for all events at competition
 # - Competition count per competitor
 # - Single and average rankings for 3x3x3 for each competitior
-print('Get necessary results from WCA Export, this may take a few seconds...')
+if new_creation or create_only_nametags:
+    if wca_ids and event_list:
+        print('Get necessary results from WCA Export, this may take a few seconds...')
 
-cur.execute("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,))
+        cur.execute("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,))
+        ranking_single = cur.fetchall()
 
-rows = cur.fetchall()
+        cur.execute("SELECT res.personId, companzahl FROM Results AS res INNER JOIN (SELECT r.personId, COUNT(DISTINCT r.competitionId) AS companzahl FROM Results AS r WHERE r.personId IN %s GROUP BY r.personId) x ON res.personId = x.personId WHERE res.personId IN %s GROUP BY res.personId", (wca_ids, wca_ids))
+        competition_count = cur.fetchall()
 
-cur.execute("SELECT res.personId, companzahl FROM Results AS res INNER JOIN (SELECT r.personId, COUNT(DISTINCT r.competitionId) AS companzahl FROM Results AS r WHERE r.personId IN %s GROUP BY r.personId) x ON res.personId = x.personId WHERE res.personId IN %s GROUP BY res.personId", (wca_ids, wca_ids))
+        cur.execute("SELECT * FROM RanksSingle WHERE eventId = '333' and personId in %s", (wca_ids,))
+        single = cur.fetchall()
 
-competition_count = cur.fetchall()
+        cur.execute("SELECT * FROM RanksAverage WHERE eventId = '333' and personId in %s", (wca_ids,))
+        average = cur.fetchall()
 
-cur.execute("SELECT * FROM RanksSingle WHERE eventId = '333' and personId in %s", (wca_ids,))
+        for person in competitor_information:
+            single_results = '0.00'
+            for id in single:
+                if person['personId'] == id['personId']:
+                    single_results = str(round(id['best'] / 100, 2))
 
-single = cur.fetchall()
+            while len(single_results.split('.')[1]) < 2:
+                single_results += '0'
+            average_result = '0.00'
+            for id in average:
+                if person['personId'] == id['personId']:
+                    average_result = str(round(id['best'] / 100, 2))
 
-cur.execute("SELECT * FROM RanksAverage WHERE eventId = '333' and personId in %s", (wca_ids,))
+            while len(average_result.split('.')[1]) < 2:
+                average_result += '0'
+            comp_count = 0
+            for id in competition_count:
+                if person['personId'] == id['personId']:
+                    comp_count = id['companzahl']
 
-average = cur.fetchall()
+            person.update({'comp_count': comp_count, 'single': single_results, 'average': average_result})
 
-for person in competitor_information:
-    single_results = '0.00'
-    for id in single:
-        if person['personId'] == id['personId']:
-            single_results = str(round(id['best'] / 100, 2))
-
-    while len(single_results.split('.')[1]) < 2:
-        single_results += '0'
-    average_result = '0.00'
-    for id in average:
-        if person['personId'] == id['personId']:
-            average_result = str(round(id['best'] / 100, 2))
-
-    while len(average_result.split('.')[1]) < 2:
-        average_result += '0'
-    comp_count = 0
-    for id in competition_count:
-        if person['personId'] == id['personId']:
-            comp_count = id['companzahl']
-
-    person.update({'comp_count': comp_count, 'single': single_results, 'average': average_result})
-
-
-print('Running grouping and scrambling...')
 
 ### Create scrambling and Grouping ###
 # Syntax of grouping and scrambling function: 
 # selectscrambler(event, roundnumber, eventid, scrambler, firstscrambler, lastscrambler, groups)
-
 # - definition of # scramblers per event
 scrambler_count_list = {}
 for event in ('333fm', '333mbf'):
@@ -306,20 +296,24 @@ for event in ('333', '444', '555', 'minx', 'sq1'):
 for event in ('555', '666', '777', 'clock'):
     scrambler_count_list.update({event: 5})
 
-if new_creation:
+if reading_grouping_from_file:
     for rounds in group_list:
         event = rounds[0]
         round_name = rounds[1]
         round_number = int(rounds[1][-1:])
         groups = rounds[2]
-    
-        if round_number == round_counter[event]:
-            replace_string = ' Round ' + str(round_number)
-            if round_number == 3 and round_counter[event] != 3:
-                round_name = round_name.replace(replace_string, ' Semi Final')
-            else:
-                round_name = round_name.replace(replace_string, ' Final')
+        if round_number == 1:
+            event_ids.update({event: rowcount})
+            rowcount += 1
 
+if new_creation:
+    print('Running grouping and scrambling...')
+    for rounds in group_list:
+        event = rounds[0]
+        round_name = rounds[1]
+        round_number = int(rounds[1][-1:])
+        groups = rounds[2]
+            
         if groups > 1:
             competitor_count = competitors_per_event(registration_list, column_ids[event])
             top_scrambler = int(round(0.5 * competitor_count, 0))
@@ -331,123 +325,83 @@ if new_creation:
 
         selectscrambler(event, round_number, round_name, scrambler_count_list[event], min_scrambler, top_scrambler, groups, 1)
 
-
     print('Grouping and scrambling done.')
     print('Saving files...')
 
 # Add columns for events with < 5 scramblers
-    for k in range(0, len(scramblerlist)):
-        while len(scramblerlist[k]) < 7:
-            scramblerlist[k].append('dummy name')
+    for scrambler_id in range(0, len(scramblerlist)):
+        while len(scramblerlist[scrambler_id]) < 7:
+            scramblerlist[scrambler_id].append('dummy name')
 
-### Save results to files ###
-# Write grouping and scrambling in separate files
-output_registration = competition_name + '/registration.csv'
-output_scrambling = competition_name + '/scrambling.csv'
-output_grouping = competition_name + '/grouping.csv'
+    for schedule_event in full_schedule:
+        if schedule_event['round_number']:
+            for event_scrambler in scramblerlist:
+                if schedule_event['event_name'] == event_scrambler[0]:
+                    round_name = event_scrambler[0]
+                    replace_string = ' Round ' + event_scrambler[0][-1:]
+                    if event_scrambler[0][-1:] == '3' and round_counter[schedule_event['event_id']] != 3:
+                        round_name = round_name.replace(replace_string, ' Semi Final')
+                    elif event_scrambler[0][-1:] == str(round_counter[schedule_event['event_id']]):
+                        round_name = round_name.replace(replace_string, ' Final')
+                    event_scrambler[0] = round_name
+                    
+                    scramblerlist_sorted_by_schedule.append(event_scrambler)
 
-os.remove(wcif_file.name)
+    if scramblerlist_sorted_by_schedule:
+        scramblerlist = scramblerlist_sorted_by_schedule
 
-competitor_information_nametags = sorted(competitor_information, key=lambda x: x['name'])
-result_string_nametags = sorted(result_string, key=lambda x: x[0])
+if reading_scrambling_list_from_file: 
+    import csv
+    with open(scrambling_file_name, 'r', encoding='utf8') as f:
+        reader = csv.reader(f)
+        scramblerlist = list(reader)
+    del scramblerlist[0:2]
 
-sheet = labels.Sheet(specs, write_name, border=True)
-sheet.add_labels(name for name in competitor_information_nametags)
-nametag_file = competition_name + '/' + competition_name_stripped + '-nametags.pdf'
-sheet.save(nametag_file)
-
-if len(result_string_nametags) % 2 == 1:
-    result_string_nametags.append(('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',),)
-for person in range(0, len(result_string_nametags)):
-    if person % 2 == 0:
-        swapping_id = person + 1
-        swapping_person = result_string_nametags[swapping_id]
-        result_string_nametags[swapping_id] = result_string_nametags[person]
-        result_string_nametags[person] = swapping_person
-
-sheet = labels.Sheet(specs, write_grouping, border=True)
-sheet.add_labels((name, result_string_nametags, event_ids, scramblerlist) for name in result_string_nametags)
-grouping_nametag_file = competition_name + '/' + competition_name_stripped + '-nametags-grouping.pdf'
-sheet.save(grouping_nametag_file)
-
-if two_sided_nametags:
-    pdf_splitter(grouping_nametag_file)
-    pdf_splitter(nametag_file)
-
-    paths1 = glob.glob(competition_name + '/' + competition_name_stripped + '-nametags_*.pdf')
-    paths2 = glob.glob(competition_name + '/' + competition_name_stripped + '-nametags-grouping_*.pdf')
-    paths = paths1 + paths2
-    paths = sorted(paths, key=lambda x: x.split('_')[2])
-
-    merger(nametag_file, paths)
-    os.remove(grouping_nametag_file)
-
-
-for file_name in (output_registration, output_scrambling, output_grouping):
-    if os.path.exists(file_name):
-        print('File ' + file_name + ' already exists, backed up!')
-        backup_name = file_name.split('/')[0] + '/' + '#' + file_name.split('/')[1]
-        os.rename(file_name, backup_name)
-
-# registration file
-with open(output_registration, 'w') as registration_file:
-    print('Name, Country, WCA ID, Date of Birth, Gender, Guests, Comment, Check Box', file=registration_file)
-    for competitor in registration_list:
-        competitor_info = ''
-        for column in range(1, column_ids[min(column_ids, key=column_ids.get)]):
-            competitor_info += competitor[column] + ','
-        if competitor[0].isdigit():
-            competitor_info += competitor[0] + ','
-        else:
-            competitor_info += '0,'
-        if not competitor[3]:
-            competitor_info += 'Newcomer (Check identification!)'
-        competitor_info += ','
-        print(competitor_info, file=registration_file)
-
-# scrambling file
-with open(output_scrambling, 'w') as scrambling_file:
-    header = 'Event, Group, Scrambler 1, Scrambler 2, Scrambler 3, Scrambler 4, Scrambler 5'
-
-    print('Scrambling List ' + competition_name, file = scrambling_file)
-
-    print(header, file = scrambling_file)
-
-    for k in scramblerlist:
-        if 'Fewest Moves' not in k[0]:
-            scramblers_clean = ()
-            scramblers = (k[2], k[3], k[4], k[5], k[6])
-            sorted_scramblers = sorted(scramblers, key=lambda x: x.split()[-1])
-            for m in range(0, len(scramblers)):
-                scramblers_clean += (sorted_scramblers[m].replace('dummy name', ''),)
-            print(k[0], ',', k[1], ',', scramblers_clean[0], ',', scramblers_clean[1], ',', scramblers_clean[2], ',', scramblers_clean[3], ',', scramblers_clean[4], file = scrambling_file)
-
-# grouping file
-with open(output_grouping, 'w') as grouping_file:
-    header = ', Name'
-    for event in ('333', '222', '444', '555', '666', '777', '333bf', '333fm', '333oh', '333ft', 'minx', 'pyram', 'clock', 'skewb', 'sq1', '444bf', '555bf', '333mbf'):
-        if event in event_ids and event_ids[event] != 999:
-            header += ',' + event_dict[event]
-
-    print(header, file = grouping_file)
-
-    l = 0
-    for k in result_string:
-        l += 1
-        grouping_list = str(l) + ',' + k[0]
+    for person in range(0, len(scramblerlist)):
+        scramblerlist[person][1] = int(scramblerlist[person][1])
         
-        for event in ('333', '222', '444', '555', '666', '777', '333bf', '333fm', '333oh', '333ft', 'minx', 'pyram', 'clock', 'skewb', 'sq1', '444bf', '555bf', '333mbf'):
-                if event in event_ids and event_ids[event] != 999:
-                    grouping_list += ',' + str(k[event_ids[event]])
-
-        print(grouping_list, file = grouping_file)
-
-        if l % 32 == 0:
-            print(header, file = grouping_file)
-            print(header, file = grouping_file)
+if new_creation or blank_sheets or create_only_nametags:
+    ### Save results to files ###
+    # Write grouping and scrambling in separate files
+    output_scrambling = competition_name + '/scrambling.csv'
+    output_grouping = competition_name + '/grouping.csv'
 
 
-print('')
-print('Scrambling and grouping successfully saved. Registration-sheet created. Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
-print('')
+    if new_creation:
+        if os.path.exists(wcif_file):
+            os.remove(wcif_file)
+        
+    sheet = create_nametag_file(competitor_information, competition_name, competition_name_stripped, two_sided_nametags, create_only_nametags, result_string, event_ids, scramblerlist, grouping_file_name, event_dict, only_one_competitor, round_counter, group_list, scoresheet_competitor_name)
+
+    # scrambling file
+    create_scrambling_file(output_scrambling, competition_name, scramblerlist)
+
+    # grouping file
+    create_grouping_file(output_grouping, event_ids, event_dict, result_string)
+
+    print('')
+    print('Scrambling and grouping successfully saved. Registration-sheet created. Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
+    print('')
+
+
+# Loop to create all scoresheets
+### EXCEPTION: no scoresheets created for 3x3x3 Fewest Moves
+if new_creation or reading_grouping_from_file or blank_sheets:
+    if reading_grouping_from_file: 
+        result_string = get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name)
+    
+    create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name)
+    
+    # Error handling for entire script
+    if error_messages:
+        print('Notable errors while creating grouping and scrambling:')
+        for errors in error_messages:
+            print(error_messages[errors])
+    else:
+        print('No errors while creating files.')
+
+    print('Please see folder ' + competition_name + ' for files.')
+
+    if reading_grouping_from_file:
+        quit_program(wcif_file)
 
