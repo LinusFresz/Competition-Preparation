@@ -1,3 +1,17 @@
+'''
+    This file contains all functions to generate files:
+    PDF:
+        - (blank) scoresheets
+        - nametags
+        - schedule
+    .csv:
+        - registration
+        - grouping
+        - scrambling
+        
+    additional functions for scoresheets can be found in scoresheets_functions.py
+'''
+
 import os, sys, getpass, ftfy, unicodedata, random, labels, glob, datetime, calendar, pytz
 from collections import Counter
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
@@ -28,7 +42,6 @@ def create_blank_sheets(write_blank_sheets, competition_name):
     scoresheet_list = []
     sheet = labels.Sheet(specs_scoresheets, write_blank_sheets, border=False)
     scoresheet_file = competition_name.replace(' ', '') + 'Blank_Scoresheets.pdf'
-    print('Creating blank sheets')
     for scoresheet_count in range(0, 4):
         scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
     sheet.add_labels((name, competition_name) for name in scoresheet_list)
@@ -38,7 +51,6 @@ def create_blank_sheets(write_blank_sheets, competition_name):
 def create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name):
     # format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
-    print('Creating scoresheets...')
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)
     scoresheet_file = competition_name + '/' + competition_name_stripped + 'Scoresheets.pdf'
 
@@ -61,7 +73,6 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
 
 def create_scoresheets_second_rounds(write_scoresheets_second_round, competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, event):
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
-    print('Creating scoresheets for ' + event_round_name + '...')
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets_second_round, border=False)
     scoresheet_list = []
     counter = 0
@@ -84,7 +95,6 @@ def create_scoresheets_second_rounds(write_scoresheets_second_round, competition
     print('')
     print('Scoresheets for ' + event_round_name + ' sucessfully saved in folder ' + competition_name + '.')
     quit_program(wcif_file)
-
 
 def create_registration_file(output_registration, registration_list, column_ids, competition_days):
     with open(output_registration, 'w') as registration_file:
@@ -227,7 +237,7 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
             print("ERROR!! Competitor '" + scoresheet_competitor_name + "' not found.")
             quit_program(wcif_file)
     return result_string
-    
+
 def pdf_splitter(path, competition_name):
     fname = os.path.splitext(os.path.basename(path))[0]
  
@@ -331,6 +341,8 @@ def calculate_event_width(name, min, limit, result_string_nametags, event_ids, e
                     counter += 1
     return max_event_width
     
+### Write grouping on back of a nametag
+# 'information' contains all information to create ONE back page
 def write_grouping(label, width, height, information):
     name = information[0]
     result_string_nametags = information[1]
@@ -342,10 +354,13 @@ def write_grouping(label, width, height, information):
     
     if not name[0]:
         return
+        
     text_width = width - 12 - stringWidth('s = Scrambler', 'Arial', 9)
     width -= 235
     height -= 20
     name_and_id = ftfy.fix_text(name[0])
+    
+    # add competitor name and WCA Id on top
     if name[2]:
         name_and_id += ', ' + name[2]
     fontsize = 11
@@ -355,6 +370,8 @@ def write_grouping(label, width, height, information):
         name_width = stringWidth(name_and_id, 'Arial', fontsize)
     label.add(shapes.String(width, height, name_and_id, fontSize = fontsize, fontName='Arial'))
     
+    # determine if competitor is scrambler
+    # if yes -> clearify abbreviation on nametag
     is_scrambler = False
     for event_scrambler in scramblerlist:
         for scrambler in event_scrambler:
@@ -369,6 +386,7 @@ def write_grouping(label, width, height, information):
     height -= 30
     top_line = height
     
+    # table of events in which the competitor participates
     counter = 0
     if not is_scrambler:
         max_event_width = calculate_event_width(name, 0, 9, result_string_nametags, event_ids, event_dict)
@@ -384,6 +402,7 @@ def write_grouping(label, width, height, information):
     label.add(shapes.String(width, height+15, header, fontSize = 10, fontName='Arial'))
     does_scramble = False
     
+    # write all relevant events and group/scrambling information on nametag
     for group_event in range(3, len(name)):
         scrambling = []
         current_event = list(event_ids.keys())[list(event_ids.values()).index(group_event)]
@@ -451,6 +470,9 @@ def write_grouping(label, width, height, information):
     if does_scramble:
         label.add(shapes.String(180, 140, 's = Scrambler', fontSize = 8, fontName='Arial'))
 
+### Function to create schedule PDF
+# 'information' contains all information needed for all competition days
+# however, write_schedule only creates a the schedule for one day
 def write_schedule(label, width, height, information):
     competition_name = information[0]
     competition_name_stripped = information[1]
@@ -492,6 +514,7 @@ def write_schedule(label, width, height, information):
         comp_name_width = stringWidth(day_name, 'Arial', font_size)
     label.add(shapes.String(width/2, height-120, day_name, textAnchor='middle', fontSize=font_size, fontName='Arial'))
     
+    # add header of table
     header_font_size = 16
     label.add(shapes.Rect(10,height-166,52, 26, fillColor=colors.white))
     label.add(shapes.String(20, height-160, 'Start', fontSize=header_font_size, fontName='Arial'))
@@ -504,10 +527,13 @@ def write_schedule(label, width, height, information):
     label.add(shapes.Rect(387,height-166,190, 26, fillColor=colors.white))
     label.add(shapes.String(485, height-160, 'Format', fontSize=header_font_size, textAnchor='middle', fontName='Arial'))
     
+    # add each event for the selected day
     height += 13
     for event in full_schedule:
         double_height = False
         event_day = event['startTime'].split('T')[0]
+        
+        # determination and validation of a lot of event specific information (start and end time, timelimit, cutoff, advancing competitors etc.)
         if event_day == competition_day:
             event_start = event['startTime'].split('T')[1][:-1]
             event_start = event_start.split(':')[0] + ':' + event_start.split(':')[1]
@@ -598,6 +624,8 @@ def write_schedule(label, width, height, information):
                         else: 
                             break
                     format_string2 = format.replace(format_string1, '')
+            
+            # actual printing of the event row
             label.add(shapes.Rect(10,height-195-set_box_height,52, box_height, fillColor=colors.white))
             label.add(shapes.Rect(62,height-195-set_box_height,52, box_height, fillColor=colors.white))
             label.add(shapes.Rect(112,height-195-set_box_height,160, box_height, fillColor=colors.white))
@@ -621,6 +649,7 @@ def write_schedule(label, width, height, information):
             else:
                 height -= event_font_size + 4
 
+### Creation of schedule file
 def create_schedule_file(competition_name, competition_name_stripped, full_schedule, event_info, competition_days, competition_start_day, timezone_utc_offset, formats, format_names, round_counter):
     specs_scoresheets = labels.Specification(210, 297, 1, 1, 210, 297)
     

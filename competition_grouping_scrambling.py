@@ -1,14 +1,22 @@
 #!/usr/bin/python
 
+'''
+    This file contains:
+    - grouping
+    - selection of scramblers
+    - nametags
+    - scoresheets
+'''
+
 from information_analysis import *
 from scoresheets_functions import *
 
-# format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
-
 if blank_sheets:
+    print('Creating blank sheets')
     create_blank_sheets(write_blank_sheets, competition_name)
     
 if create_scoresheets_second_rounds_bool:
+    print('Creating scoresheets for ' + event_round_name + '...')
     create_scoresheets_second_rounds(write_scoresheets_second_round, competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, event)
 
 error_messages = {}
@@ -18,6 +26,11 @@ rowcount = 3
 
 event_ids = {'333': 999, '222': 999, '444': 999, '555': 999, '666': 999, '777': 999, '333bf': 999, '333fm': 999, '333oh': 999, '333ft': 999, 'minx': 999, 'pyram': 999, 'clock': 999, 'skewb': 999, 'sq1': 999, '444bf': 999, '555bf': 999, '333mbf': 999} 
 
+### Create new string for grouping and add name + DOB
+if registration_list:
+    for person in registration_list:
+        result_string.append((person[1], person[2], person[3]))
+
 def competitors_per_event(grouping_list, event_column):
     event_count = 0
     for grouping_id in grouping_list:
@@ -25,35 +38,33 @@ def competitors_per_event(grouping_list, event_column):
             event_count += 1
     return event_count
 
-### Grouping for all events with given number of groups ###
+### Grouping for all events with given number of groups
 def grouping(registration_list, groups, event_column):
     event_count = competitors_per_event(registration_list, event_column)
 
-    group_size = round(event_count / groups, 0)  # Average number of competitors per group
+    group_size = round(event_count / groups, 0)  # average number of competitors per group
     actual_group_size = 1
-    group_number = 0
-    counter = 0
+    group_number, counter = 0, 0
     for person in range(0, len(registration_list)):
         if registration_list[person][event_column] == '1':
             if (actual_group_size - 1) % group_size == 0:
                 group_number += 1
                 if group_number > groups:
                     group_number -= 1
-            result_string[counter] += (group_number,)  # Adding group number for competitors
+            result_string[counter] += (group_number,)  # adding group number for competitors
             actual_group_size += 1
         else:
-            result_string[counter] += ('',)  # Leaving group empty if competitor doesn't compete
+            result_string[counter] += ('',)  # leaving group empty if competitor doesn't compete
         counter += 1
 
 
-### Collects all rankings from SQL-string for choosen event ###
+### Collect all rankings from SQL-string for choosen event
 def get_event_results(event_ranking, ranking_single, event):
     for ranked_competitor in ranking_single:
         if event == ranked_competitor['eventId']:
             event_ranking.append(ranked_competitor)
 
-
-### Selects correct ranking for choosen event ###
+### Select correct ranking for choosen event
 def rankings(event_ranking, result_string, ranking, event):
     get_event_results(event_ranking, ranking_single, event)
     for person in range(0, len(result_string)):
@@ -67,12 +78,6 @@ def rankings(event_ranking, result_string, ranking, event):
         if not true:
             ranking[person] += (99999,)
 
-
-### Create new string for grouping and add name + DOB ###
-if registration_list:
-    for person in registration_list:
-        result_string.append((person[1], person[2], person[3]))
-
 def repeat_selectscrambler(event, round_number, round_id, scrambler_count, groups):
     error_string = 'ERROR!! Not enough scramblers found for ' + event + ', ' + round_id
     error_string_id = 'no_scramblers_' + event
@@ -81,20 +86,21 @@ def repeat_selectscrambler(event, round_number, round_id, scrambler_count, group
         selectscrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2)
     error_messages.update({error_string_id: error_string})
 
-### Select scramblers for each group and creates grouping ###
+### Select scramblers for each group and creates grouping
 def selectscrambler(event, round_number, round_id, scrambler_count, first_place, last_place, groups, scrambling_run_id):
     global rowcount
     ranking = []
     event_ranking = []
     loop_counter = 1
 
-    # Adds correct columnid for events AND creates grouping for first rounds
+    # add correct columnid for events AND create grouping for first rounds
     if round_number == 1:
         if scrambling_run_id == 1:
             event_ids.update({event: rowcount})
             grouping(registration_list, groups, column_ids[event])
             rowcount += 1
 
+    # create ranking for event
     for person in registration_list:
         ranking.append((person[1], person[3]))
     
@@ -112,7 +118,7 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
         repeat_selectscrambler(event, round_number, round_id, scrambler_count, groups)
         return 0
 
-    # Actual grouping happens here
+    # actual determination of scramblers happens here
     for group_number in range(1, groups + 1):
         exists = False
         for scrambler in range(0, len(scramblerlist)):
@@ -123,7 +129,7 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
             scramblerlist.append([round_id, group_number])
 
         for scrambler in range(0, len(scramblerlist)):
-            if scramblerlist[scrambler][0] == round_id:  # Only finishes after enough scramblers are in list
+            if scramblerlist[scrambler][0] == round_id:  # only finishes after enough scramblers are in list
                 while len(scramblerlist[scrambler]) < (scrambler_count + 2):
                     rank = random.randint(first_place, last_place)
 
@@ -143,7 +149,7 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
                             break
                     loop_counter += 1
 
-# Part of the checking process: check if scrambler already scrambles more than average
+# part of the checking process: check if scrambler already scrambles more than average
 def scrambling_average(personId):
     scrambling_count_list = ()
     scramble_count_person = 0
@@ -164,8 +170,8 @@ def scrambling_average(personId):
     return scramble_count_person, average_scrambling
 
 
-### Check if scrambler can be used ###
-# Conditions so that scrambler can NOT be selected:
+### Check if scrambler can be used
+# conditions so that scrambler can NOT be selected:
 # - is in same group
 # - has no official result in this event
 # - is already scrambler for this group
@@ -179,10 +185,9 @@ def scrambling_average(personId):
 # extra conditions for finals with only one group:
 # - scrambler is in top16 of this event
 
-# - Special conditions if in previous run not enough scramblers were found (scrambling_run_id == 2):
+# - special conditions if in previous run not enough scramblers were found (scrambling_run_id == 2):
 # - competitor does not compete in event (i.e. persons from 3x3x3 get selected for 3x3x3 Blindfolded)
 def checking(ranking, event_ids, event, groups, rank, group_number, round_number, scrambler, first_place, last_place, scrambling_run_id):
-
     if scrambling_run_id == 2:
         previous_event = event
         event = event[:3]
@@ -239,10 +244,10 @@ def checking(ranking, event_ids, event, groups, rank, group_number, round_number
 
     return 1
 
-### Selection of necessary information from WCA database export. Information include: ###
-# - Rankings for all events at competition
-# - Competition count per competitor
-# - Single and average rankings for 3x3x3 for each competitior
+### Selection of necessary information from WCA database export. Information include:
+# - rankings for all events at competition
+# - competition count per competitor
+# - single and average rankings for 3x3x3 for each competitior
 if new_creation or create_only_nametags:
     if wca_ids and event_list:
         print('Get necessary results from WCA Export, this may take a few seconds...')
@@ -281,9 +286,8 @@ if new_creation or create_only_nametags:
 
             person.update({'comp_count': comp_count, 'single': single_results, 'average': average_result})
 
-
-### Create scrambling and Grouping ###
-# Syntax of grouping and scrambling function: 
+### Create scrambling and Grouping
+# syntax of grouping and scrambling function: 
 # selectscrambler(event, roundnumber, eventid, scrambler, firstscrambler, lastscrambler, groups)
 # - definition of # scramblers per event
 scrambler_count_list = {}
@@ -307,6 +311,7 @@ if reading_grouping_from_file:
             rowcount += 1
 
 if new_creation:
+    print('')
     print('Running grouping and scrambling...')
     for rounds in group_list:
         event = rounds[0]
@@ -325,10 +330,7 @@ if new_creation:
 
         selectscrambler(event, round_number, round_name, scrambler_count_list[event], min_scrambler, top_scrambler, groups, 1)
 
-    print('Grouping and scrambling done.')
-    print('Saving files...')
-
-# Add columns for events with < 5 scramblers
+    # Add dummy columns for events with < 5 scramblers
     for scrambler_id in range(0, len(scramblerlist)):
         while len(scramblerlist[scrambler_id]) < 7:
             scramblerlist[scrambler_id].append('dummy name')
@@ -349,6 +351,8 @@ if new_creation:
 
     if scramblerlist_sorted_by_schedule:
         scramblerlist = scramblerlist_sorted_by_schedule
+        
+    print('Grouping and scrambling done.')
 
 if reading_scrambling_list_from_file: 
     import csv
@@ -360,12 +364,14 @@ if reading_scrambling_list_from_file:
     for person in range(0, len(scramblerlist)):
         scramblerlist[person][1] = int(scramblerlist[person][1])
         
+### Save results to files
 if new_creation or blank_sheets or create_only_nametags:
-    ### Save results to files ###
-    # Write grouping and scrambling in separate files
+    # write grouping and scrambling in separate files
+    print('')
+    print('Create scrambling and grouping file...')
+    
     output_scrambling = competition_name + '/scrambling.csv'
     output_grouping = competition_name + '/grouping.csv'
-
 
     if new_creation:
         if os.path.exists(wcif_file):
@@ -373,34 +379,35 @@ if new_creation or blank_sheets or create_only_nametags:
         
     sheet = create_nametag_file(competitor_information, competition_name, competition_name_stripped, two_sided_nametags, create_only_nametags, result_string, event_ids, scramblerlist, grouping_file_name, event_dict, only_one_competitor, round_counter, group_list, scoresheet_competitor_name)
 
-    # scrambling file
+    # grouping and scrambling file
     create_scrambling_file(output_scrambling, competition_name, scramblerlist)
-
-    # grouping file
     create_grouping_file(output_grouping, event_ids, event_dict, result_string)
 
-    print('')
-    print('Scrambling and grouping successfully saved. Registration-sheet created. Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
+    print('Scrambling and grouping successfully saved. Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
     print('')
 
 
-# Loop to create all scoresheets
-### EXCEPTION: no scoresheets created for 3x3x3 Fewest Moves
-if new_creation or reading_grouping_from_file or blank_sheets:
+### Loop to create all remaining files: grouping and scrambling
+#EXCEPTION: no scoresheets created for 3x3x3 Fewest Moves
+if new_creation or blank_sheets or reading_grouping_from_file:
     if reading_grouping_from_file: 
         result_string = get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name)
     
+    print('Creating scoresheets...')
     create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name)
     
-    # Error handling for entire script
+    # error handling for entire script
     if error_messages:
+        print('')
         print('Notable errors while creating grouping and scrambling:')
         for errors in error_messages:
             print(error_messages[errors])
     else:
+        print('')
         print('No errors while creating files.')
 
-    print('Please see folder ' + competition_name + ' for files.')
+    print("Please see folder '" + competition_name + "' for files.")
+    print('')
 
     if reading_grouping_from_file:
         quit_program(wcif_file)

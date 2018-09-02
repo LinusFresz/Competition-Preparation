@@ -1,21 +1,22 @@
 #!/usr/bin/python
 
-from wca_registration import *
-
-
 ''' 
-    This script creats various things a organizer needs to have for a competition:
+    This script creats various things an organizer needs to have for a competition:
     - competitor groupings
     - scrambling list for all events and rounds (except FMC)
     - nametags
+    - registration file for check-in
+    - create PDF-schedule from WCA website information
     - scoresheets for first rounds
+    - scoresheets for consecutive rounds
+    - blank scoresheets
     
     System information: 
-    This script was tested on Mac OS 10.13.4 with python 3.5.2
+    This script was tested on Mac OS 10.13.4 with python 3.5.2 and 3.7.0
     Please be aware, that you need Chrome to be installed on your device.
     
     HOW TO:
-    Make sure to add all event information in the 'Manage events' tab for your competition on the WCA website. To run the script, type into your terminal 'pyton competition_grouping_scrambling.py' (or 'python3 competition_grouping_scrambling.py') and follow the steps shown in the window.
+    Make sure to add all event information in the 'Manage events' and 'Schedule' (optional) tabs for your competition on the WCA website. To run the script, type into your terminal 'pyton competition_grouping_scrambling.py' (or 'python3 competition_grouping_scrambling.py') and follow the steps shown in the window.
     
     Files that need to be in the same folder:
     - comeptition_preparation_start.py
@@ -31,16 +32,20 @@ from wca_registration import *
     For further details and support, please contact Linus Frész, linuf95@gmail.com
 '''
 
+from wca_registration import *
+
+# collection of booleans and variables for various different options from this script
 blank_sheets, create_only_nametags, new_creation, reading_scrambling_list_from_file, create_scoresheets_second_rounds_bool, reading_grouping_from_file, only_one_competitor, create_registration_file_bool, create_only_registration_file, read_only_registration_file, create_schedule, create_only_schedule = (False for i in range(12))
 get_registration_information, two_sided_nametags = (True for i in range(2))
 scoresheet_competitor_name = ''
 
 event_dict = {'333': '3x3x3', '222': '2x2x2', '444': '4x4x4', '555': '5x5x5', '666': '6x6x6', '777': '7x7x7', '333bf': '3x3x3 Blindfolded', '333fm': '3x3x3 Fewest Moves', '333oh': '3x3x3 One-Handed', '333ft': '3x3x3 With Feet', 'clock': 'Clock', 'minx': 'Megaminx', 'pyram': 'Pyraminx', 'skewb': 'Skewb', 'sq1': 'Square-1', '444bf': '4x4x4 Blindfolded', '555bf': '5x5x5 Blindfolded', '333mbf': '3x3x3 Multi-Blindfolded'}
 
+### Selection of script functions
 while True:
     print('Please select: ')
     print('1. Competition preparation (grouping, scrambling, scoresheets, nametags, schedule, registration file)')
-    print('2. Scoresheets for second rounds')
+    print('2. Scoresheets for consecutive rounds')
     print('3. Blank scoresheets')
     print('4. Registration information')    
     print('5. Nametags')
@@ -86,7 +91,8 @@ while True:
     print("Wrong input, please enter one of the available options.")
     print('')
 
-# Get necessary information for new competition
+### Evaluation of selection and initialization 
+# get necessary information for new competition
 if new_creation or create_only_nametags:
     bool = True
     wca_info = wca_registration_system()
@@ -134,9 +140,12 @@ if new_creation or create_only_nametags:
         wcif_file = get_wca_info(wca_id, wca_password, competition_name, competition_name_stripped, store_file)
     
     print('Saved results, extracting data now.')  
+    
+# create blank scoresheets
 elif blank_sheets:
     competition_name = input('Competition name: (leave empty if not wanted) ')
 
+# select grouping file if only nametags should be generated
 elif reading_grouping_from_file:
     wca_info = wca_registration_system()
     wca_id, wca_password, competition_name, competition_name_stripped, wcif_file = wca_registration(bool)
@@ -145,6 +154,7 @@ elif reading_grouping_from_file:
     file_name, grouping_file_name = competition_information_fetch(wca_info, True, False, new_creation)
     wcif_file = get_wca_info(wca_id, wca_password, competition_name, competition_name_stripped, '')    
 
+# create schedule from wca website information
 elif create_only_schedule:
     bool = True
     wca_info = wca_registration_system()
@@ -159,7 +169,7 @@ elif create_only_schedule:
     store_file = competition_name + '/' + competition_name_stripped + '-grouping.txt'
     wcif_file = get_wca_info(wca_id, wca_password, competition_name, competition_name_stripped, store_file)
     
-
+# create scoresheets for seconds rounds by using cubecomps.com information
 elif create_scoresheets_second_rounds_bool:
     cubecomps_id = input('Link to previous round: ')
     advancing_competitors = int(input('Number of advancing competitors: '))
@@ -167,6 +177,7 @@ elif create_scoresheets_second_rounds_bool:
     driver.get(cubecomps_id)
     file = driver.find_element_by_xpath('html').text.split('\n')
 
+    # parsing of cubecomps.com information 
     competition_name = file[0]
     competition_name_stripped = competition_name.replace(' ', '')
     competitors_start = False

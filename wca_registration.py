@@ -1,11 +1,13 @@
-from pdf_file_generation import *
-from chromedriver_data import *
-from db import WCA_Database
 '''
 Multiple functions to log in on the WCA website and catch all necessary competition and competitor registration information
 '''
 
-# Error handling for WCA website login errors
+
+from pdf_file_generation import *
+from chromedriver_data import *
+from db import WCA_Database
+
+### Error handling for WCA website login errors
 def error_handling_wcif(driver, competition_name, store_file, competition_page):
     if 'Not logged in' in competition_page:
         print('ERROR!!')
@@ -30,7 +32,7 @@ def error_handling_wcif(driver, competition_name, store_file, competition_page):
             print(competition_page, file=file_save)
 
 
-### 4 basic functions for login and saving necessary information from WCA website
+### 5 functions for login and saving necessary information from WCA website
 def wca_registration_system():
     while True:
         registration_information_format = input('Use WCA website information? (y/n) ')
@@ -98,7 +100,6 @@ def wca_registration(new_creation):
         return (wca_id, wca_password, competition_name, competition_name_stripped, wcif_file)
     return (wca_id, wca_password)
 
-
 def get_wca_info(wca_id, wca_password, competition_name, competition_name_stripped, file):
     print('Fetching rounds and group information from WCA competition website...')
     url = 'https://www.worldcubeassociation.org/users/sign_in'
@@ -113,15 +114,13 @@ def get_wca_info(wca_id, wca_password, competition_name, competition_name_stripp
     p.send_keys(wca_password)
     p.send_keys(Keys.RETURN)
     driver.get(url2)
-
     wcif_file = competition_name + '/wcif_information.txt'
-    
-    # Error handling for wrong WCA website information and file-save if successful information fetch
     
     competition_page = driver.find_element_by_xpath('html').text
     driver.close()
     driver.quit()    
     
+    # error handling for wrong WCA website information and file-save if successful information fetch
     error_handling_wcif(driver, competition_name, wcif_file, competition_page)
     
     return wcif_file
