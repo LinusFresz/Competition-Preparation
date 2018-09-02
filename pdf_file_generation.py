@@ -37,18 +37,18 @@ def quit_program(wcif_file):
             os.remove(wcif_file.name)
     sys.exit()
 
-def create_blank_sheets(write_blank_sheets, competition_name):
+def create_blank_sheets(write_blank_sheets, competition_name, scrambler_signature):
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     scoresheet_list = []
     sheet = labels.Sheet(specs_scoresheets, write_blank_sheets, border=False)
     scoresheet_file = competition_name.replace(' ', '') + 'Blank_Scoresheets.pdf'
     for scoresheet_count in range(0, 4):
         scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
-    sheet.add_labels((name, competition_name) for name in scoresheet_list)
+    sheet.add_labels((name, competition_name, scrambler_signature) for name in scoresheet_list)
     sheet.save(scoresheet_file)
     quit_program(wcif_file)
 
-def create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name):
+def create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name, scrambler_signature):
     # format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)
@@ -66,12 +66,12 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
             if (counter % 4) != 0 and not only_one_competitor:
                 for filling in range(0,4-counter%4):
                     scoresheet_list.append(('name', 'country', 'id', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''))
-            sheet.add_labels((name, event_ids, event_dict, round_counter, competitor_information, competition_name, event) for name in scoresheet_list)
+            sheet.add_labels((name, event_ids, event_dict, round_counter, competitor_information, competition_name, event, scrambler_signature) for name in scoresheet_list)
     if only_one_competitor:
         scoresheet_file = competition_name + '/' + competition_name_stripped + 'Scoresheets' + scoresheet_competitor_name.replace(' ', '') + '.pdf' 
     sheet.save(scoresheet_file)
 
-def create_scoresheets_second_rounds(write_scoresheets_second_round, competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, event):
+def create_scoresheets_second_rounds(write_scoresheets_second_round, competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, event, scrambler_signature):
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets_second_round, border=False)
     scoresheet_list = []
@@ -88,7 +88,7 @@ def create_scoresheets_second_rounds(write_scoresheets_second_round, competition
             scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
                 
     # Create scoresheets
-    sheet.add_labels((name, event_info, event_2, next_round_name, event_round_name, competition_name, event) for name in scoresheet_list)
+    sheet.add_labels((name, event_info, event_2, next_round_name, event_round_name, competition_name, event, scrambler_signature) for name in scoresheet_list)
     scoresheet_file = competition_name + '/' + 'Scoresheets' + event_round_name + '.pdf'
     sheet.save(scoresheet_file)
     
@@ -164,7 +164,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
     competitor_information_nametags = sorted(competitor_information, key=lambda x: x['name'])
     sheet = labels.Sheet(specs, write_name, border=True)
     sheet.add_labels((name, competition_name) for name in competitor_information_nametags)
-    nametag_file = competition_name + '/' + competition_name_stripped + '-nametags.pdf'
+    nametag_file = competition_name + '/' + competition_name_stripped + 'Nametags.pdf'
     sheet.save(nametag_file)
 
     if two_sided_nametags:
