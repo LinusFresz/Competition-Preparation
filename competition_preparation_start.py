@@ -35,7 +35,7 @@
 from wca_registration import *
 
 # collection of booleans and variables for various different options from this script
-blank_sheets, create_only_nametags, new_creation, reading_scrambling_list_from_file, create_scoresheets_second_rounds_bool, reading_grouping_from_file, only_one_competitor, create_registration_file_bool, create_only_registration_file, read_only_registration_file, create_schedule, create_only_schedule = (False for i in range(12))
+blank_sheets, create_only_nametags, new_creation, reading_scrambling_list_from_file, create_scoresheets_second_rounds_bool, reading_grouping_from_file, only_one_competitor, create_registration_file_bool, create_only_registration_file, read_only_registration_file, create_schedule, create_only_schedule, scrambler_signature = (False for i in range(13))
 get_registration_information, two_sided_nametags = (True for i in range(2))
 scoresheet_competitor_name = ''
 
@@ -98,21 +98,11 @@ if new_creation or create_only_nametags:
     wca_info = wca_registration_system()
     wca_id, wca_password, competition_name, competition_name_stripped, wcif_file = wca_registration(bool)
     if not create_only_registration_file:
-        print('Create two-sided nametags? (grouping (and scrambling) information on the back) (y/n)')
-        while True:
-            two_sided = input('')
-            if two_sided.upper() in ('N', 'Y'):
-                break
-            else:   
-                print("Wrong input, please enter 'y' or 'n'.")
-                print('')
-
-        if two_sided.upper() == 'Y':
+        two_sided_nametags = get_information('Create two-sided nametags? (grouping (and scrambling) information on the back) (y/n)')
+        if two_sided_nametags:
             print('Using WCA registration and event information.')
-            two_sided_nametags = True
-        else:
-            two_sided_nametags = False
-    
+        scrambler_signature = get_information('Add signature field to scorecards? (y/n)')
+        
     if create_only_nametags and not two_sided_nametags and not wca_info:
         get_registration_information = False
         read_only_registration_file = True
@@ -143,12 +133,14 @@ if new_creation or create_only_nametags:
     
 # create blank scoresheets
 elif blank_sheets:
+    scrambler_signature = get_information('Add signature field to scorecards? (y/n)')
     competition_name = input('Competition name: (leave empty if not wanted) ')
-
+    
 # select grouping file if only nametags should be generated
 elif reading_grouping_from_file:
     wca_info = wca_registration_system()
     wca_id, wca_password, competition_name, competition_name_stripped, wcif_file = wca_registration(bool)
+    scrambler_signature = get_information('Add signature field to scorecards? (y/n)')
     if only_one_competitor:
         scoresheet_competitor_name = input('Competitor Name: ')
     file_name, grouping_file_name = competition_information_fetch(wca_info, True, False, new_creation)
@@ -179,6 +171,7 @@ elif create_scoresheets_second_rounds_bool:
 
     # parsing of cubecomps.com information 
     competition_name = file[0]
+    create_competition_folder(competition_name)
     competition_name_stripped = competition_name.replace(' ', '')
     competitors_start = False
     counter, competitor = 0, 0
@@ -211,6 +204,7 @@ elif create_scoresheets_second_rounds_bool:
 
     wca_id, wca_password = wca_registration(new_creation)
     wca_info = wca_registration_system()
+    scrambler_signature = get_information('Add signature field to scorecards? (y/n)')
     file_name, grouping_file_name = competition_information_fetch(wca_info, False, False, new_creation)
 
     wcif_file = get_wca_info(wca_id, wca_password, competition_name, competition_name_stripped, file)

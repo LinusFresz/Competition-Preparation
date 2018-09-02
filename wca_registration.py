@@ -86,7 +86,7 @@ def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags
         else:
             file_name = file_name_csv
         if only_scoresheets or (not new_creation and two_sided_nametags):
-            grouping_file_name = get_file_name('grouping')
+            grouping_file_name = "German Nationals 2018/GermanNationals2018Grouping.csv" #get_file_name('grouping')
     return (file_name, grouping_file_name)
 
 def wca_registration(new_creation):
@@ -95,6 +95,7 @@ def wca_registration(new_creation):
     
     if new_creation:
         competition_name = input('Competition name: ')
+        create_competition_folder(competition_name)
         competition_name_stripped = competition_name.replace(' ', '')
         wcif_file = competition_name + '/' + competition_name_stripped + '-grouping.txt'
         return (wca_id, wca_password, competition_name, competition_name_stripped, wcif_file)
@@ -124,3 +125,22 @@ def get_wca_info(wca_id, wca_password, competition_name, competition_name_stripp
     error_handling_wcif(driver, competition_name, wcif_file, competition_page)
     
     return wcif_file
+    
+def get_information(which_information):
+    print(which_information)
+    while True:
+        input_information = input('')
+        if input_information.upper() in ('N', 'Y'):
+            break
+        else:   
+            print("Wrong input, please enter 'y' or 'n'.")
+            print('')
+                
+    if input_information.upper() == 'Y':
+        return True
+    else:
+        return False
+
+def create_competition_folder(competition_name):
+    if not os.path.exists(competition_name):
+        os.makedirs(competition_name)

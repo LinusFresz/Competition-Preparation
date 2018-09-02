@@ -13,11 +13,11 @@ from scoresheets_functions import *
 
 if blank_sheets:
     print('Creating blank sheets')
-    create_blank_sheets(write_blank_sheets, competition_name)
+    create_blank_sheets(write_blank_sheets, competition_name, scrambler_signature)
     
 if create_scoresheets_second_rounds_bool:
     print('Creating scoresheets for ' + event_round_name + '...')
-    create_scoresheets_second_rounds(write_scoresheets_second_round, competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, event)
+    create_scoresheets_second_rounds(write_scoresheets_second_round, competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, event, scrambler_signature)
 
 error_messages = {}
 
@@ -370,8 +370,8 @@ if new_creation or blank_sheets or create_only_nametags:
     print('')
     print('Create scrambling and grouping file...')
     
-    output_scrambling = competition_name + '/scrambling.csv'
-    output_grouping = competition_name + '/grouping.csv'
+    output_scrambling = competition_name + '/' + competition_name_stripped + 'Scrambling.csv'
+    output_grouping = competition_name + '/' + competition_name_stripped + 'Grouping.csv'
 
     if new_creation:
         if os.path.exists(wcif_file):
@@ -394,7 +394,7 @@ if new_creation or blank_sheets or reading_grouping_from_file:
         result_string = get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name)
     
     print('Creating scoresheets...')
-    create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name)
+    create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name, scrambler_signature)
     
     # error handling for entire script
     if error_messages:
