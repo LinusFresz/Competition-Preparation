@@ -404,7 +404,7 @@ if full_schedule:
         if create_only_schedule:
             quit_program(wcif_file)
             
-else:
+elif create_schedule:
     print('')
     print('ERROR!! No schedule found on WCA website. Script continues without creating schedule.')
     print('')
