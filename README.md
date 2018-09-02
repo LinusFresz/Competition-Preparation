@@ -2,16 +2,18 @@
 I've done my work with developing a competition preparation script, here you can see the results.
 
 ## What
-This script creates various things a organizer might need for a competition:
+This script creats various things an organizer needs to have for a competition:
 - competitor groupings
 - scrambling list for all events and rounds (except FMC)
-- nametags (with the option to print scrambling and grouping on the back of the scoresheets)
+- nametags
+- registration file for check-in
+- create PDF-schedule from WCA website information
 - scoresheets for first rounds
-- scoresheets for succeeding rounds once the results are uploaded to cubecomps.com
+- scoresheets for consecutive rounds
 - blank scoresheets
     
 ### System information: 
-This script was tested on Mac OS 10.13.4 with python 3.5.2
+This script was tested on Mac OS 10.13.4 with python 3.5.2 and 3.7.0
 Please be aware, that you need Chrome to be installed on your device.
     
 ## How
@@ -22,11 +24,8 @@ Files that need to be in the same folder:
 - competition_grouping_scrambling.py
 - wca_registration.py
 - information_analysis.py
-- nametags.py
-- scoresheets.py
-- scoresheets_second_rounds.py
-- scoresheets_functions.py
 - chromedriver_data.py
+- pdf_file_generation.py
 - chromedriver (http://chromedriver.chromium.org/downloads)
 - Trebuchet.ttf ([TrueType font](https://www.fontpalace.com/font-download/Trebuchet+MS/))
     
