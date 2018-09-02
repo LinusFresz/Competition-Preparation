@@ -4,17 +4,13 @@
 Data extraction of WCIF and registration file (if used). Not too interesting, mainly a lot of parsing in .txt files (registration file and/or wcif file).    
 '''
 
-
 from competition_preparation_start import *
 
+# initialize various variables for parsing and analysis
 events, events_now, persons, accepted, roles, cumulative_rounds, schedule = (False for i in range(7))
-
 registered_events, final_registration_list, all_events, event_ids_wca = (() for i in range(4)) 
-
 registration_list, registration_list_wca, group_list, competitor_information, competitor_information_wca, event_info, full_schedule, events_per_day, competing_day = ([] for i in range(9))
-
 event_id, round_id, competitor_role, guests, cumulative, advancing_competitiors, advancing_type = ('' for i in range(7))
-
 event_counter, event_counter_wca, group_count, cutoff_number, cutoff, round_counter, competition_days = (0 for i in range(7))
 registration_id = 1
 
@@ -35,8 +31,8 @@ if get_registration_information:
     for line in lines:
         line = line.strip()
         
-        ########## GROUPING ##########
-        # For every event pars information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
+        ########## EVENTS ##########
+        # For every event parse information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
         if line.find('"schedule":') != -1:
             events = False
             schedule = True
@@ -172,6 +168,9 @@ if get_registration_information:
         if line.find('"persons":') != -1:
             persons = True
             
+        ########## SCHEDULE ##########
+        # get schedule information from wca website
+        # used for sorting of scramblerlist + creating a PDF containing the schedule
         if schedule:
             if 'startDate' in line:
                 competition_start_day = line[14:-2]
@@ -266,10 +265,9 @@ if get_registration_information:
         print('Please make sure to enter all necessary information in the "Manage events" tab on the WCA competition page.')
         quit_program(wcif_file)
 
-    # Get data from csv-export
-    # Same as for the WCA registration, get competitor information from registration file (if used): name, WCA ID, date of birth, gender, country and events registered for
+    ### Get data from csv-export
+    # same as for the WCA registration, get competitor information from registration file (if used): name, WCA ID, date of birth, gender, country and events registered for
     registration_id = 1
-
     if not wca_info:
         print('Open registration file...')
         file = open(file_name)
@@ -327,6 +325,8 @@ if get_registration_information:
     if wca_info:
         registration_list = registration_list_wca
 
+
+### Parse registration file
 if read_only_registration_file:
     file = open(file_name)
     
@@ -363,6 +363,7 @@ if read_only_registration_file:
                 wca_ids += (str(row_list[3]),)
         line_count += 1
     
+### Create schedule (if exists on WCA website)
 if full_schedule:
     full_schedule = sorted(sorted(full_schedule, key=lambda x: x['event_name']), key=lambda x: x['startTime'])
     for schedule_event in full_schedule:
@@ -398,23 +399,25 @@ if full_schedule:
         competitor.append(competing_day)
         competitor.append(competing_per_day_list)
     
-# registration file
+    if create_schedule:
+        create_schedule_file(competition_name, competition_name_stripped, full_schedule, event_info, competition_days, competition_start_day, timezone_utc_offset, formats, format_names, round_counter)
+        if create_only_schedule:
+            quit_program(wcif_file)
+            
+else:
+    print('')
+    print('ERROR!! No schedule found on WCA website. Script continues without creating schedule.')
+    print('')
+    
+### Create registration file (.csv)
 if create_registration_file_bool:
+    print('')
+    print('Create registration file...')
     output_registration = competition_name + '/registration.csv'
     create_registration_file(output_registration, registration_list, column_ids, competition_days)
 
-    print('Registration file successfully created')
+    print('Registration file successfully created.')
+    print('')
 
     if create_only_registration_file:
         quit_program(wcif_file)
-
-if create_schedule:
-    if full_schedule:
-        create_schedule_file(competition_name, competition_name_stripped, full_schedule, event_info, competition_days, competition_start_day, timezone_utc_offset, formats, format_names, round_counter)
-    else:
-        print('')
-        print('ERROR!! No schedule found on WCA website. Script continues without creating schedule.')
-        print('')
-    if create_only_schedule:
-        quit_program(wcif_file)
-

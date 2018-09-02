@@ -1,3 +1,7 @@
+'''
+    Additional functions for the scoresheet creation.
+'''
+
 from wca_registration import *
 
 def scoresheet_results_header(label, limit, limit_width, font_size_limit, height):
@@ -21,11 +25,14 @@ def scoresheet_results_header(label, limit, limit_width, font_size_limit, height
     else:
         label.add(shapes.Rect(45,height-105,160, 15, fillColor=colors.white))
         label.add(shapes.String(49,height-100,limit, fontSize=font_size_limit, fontName='Arial'))
-        
-def scoresheet_result_boxes(label, height, format, event, cutoff_number, name):
+    return height
+
+# boxes for the actual attempts
+# automatic determination of amount of needed rows
+def scoresheet_result_boxes(label, height, width, format, event, cutoff_number, cutoff_time, name):
     height = height - 105
     number = 1
-    for k in range(0,int(format[-1:])):
+    for attempts in range(0,int(format[-1:])):
         height -= 35
         label.add(shapes.Rect(10,height,30, 30, fillColor=colors.white))
         label.add(shapes.String(22,height+10,str(number),fontSize=12, fontName='Arial'))
@@ -33,7 +40,7 @@ def scoresheet_result_boxes(label, height, format, event, cutoff_number, name):
         label.add(shapes.Rect(210,height,30, 30, fillColor=colors.white))
         label.add(shapes.Rect(245,height,30, 30, fillColor=colors.white))
         
-        # Special treatment for 3x3x3 Multi-Blindfolded: additional info in result boxes
+        # special treatment for 3x3x3 Multi-Blindfolded: additional info in result boxes
         if event == '333mbf':
             label.add(shapes.Line(50, height+8, 72, height+8,trokeColor=colors.black))
             label.add(shapes.String(74,height+10,'out of',fontSize=10, fontName='Arial'))
@@ -41,8 +48,8 @@ def scoresheet_result_boxes(label, height, format, event, cutoff_number, name):
             label.add(shapes.String(125,height+10,'  Time:',fontSize=10, fontName='Arial'))
             label.add(shapes.Line(156, height+8, 200, height+8,trokeColor=colors.black))
     
-        # Add cutoff information (if there are any)
-        if cutoff_number == number and name['name']:
+        # add cutoff information (if there is any)
+        if cutoff_number == str(number) and name[0]:
             if cutoff_number == 1: 
                 cutoff = 'Continue if Attempt 1 is below ' + cutoff_time
                 indent = 70
@@ -55,7 +62,8 @@ def scoresheet_result_boxes(label, height, format, event, cutoff_number, name):
             height -= 20
         number+= 1
     return height
-        
+  
+# boxes for extra attempt
 def scoresheet_extra(label, height, width):
     label.add(shapes.Line(10,height-13,width/2.0-50,height-13,trokeColor=colors.black,strokeWidth=1,strokeDashArray=[2,2])) 
     label.add(shapes.Line(width/2+50,height-13,width-10,height-13,trokeColor=colors.black,strokeWidth=1,strokeDashArray=[2,2])) 
@@ -65,6 +73,7 @@ def scoresheet_extra(label, height, width):
     label.add(shapes.Rect(210,height-55,30, 30, fillColor=colors.white))
     label.add(shapes.Rect(245,height-55,30, 30, fillColor=colors.white))
     
+# extra header for blank scoresheets with fields for event, round, competitor name and id
 def scoresheet_blank_header(label, height, width, competition_name):
     text_width = width - 10
     font_size = 25
@@ -85,6 +94,8 @@ def scoresheet_blank_header(label, height, width, competition_name):
     label.add(shapes.Rect(210,height-85,65, 17, fillColor=colors.white))
     label.add(shapes.String(212, height-80, 'Id:', fontSize=12, fontName='Arial'))
     
+# writing scoresheets for consecutive rounds
+### this function needs review in the future ###
 def write_scoresheets_second_round(label, width, height, information):
     name = information[0]
     event_info = information[1]
@@ -100,7 +111,7 @@ def write_scoresheets_second_round(label, width, height, information):
         id = '     ' + name['personId']
     label.add(shapes.String(width-78, height-16, id, fontSize=10, fontName='Arial'))
     
-    # Selection of event information and shrinking to fit on scoresheets
+    # selection of event information and shrinking to fit on scoresheets
     text_width = width - 10
     font_size_event = 25
     font_size_limit = 8
@@ -141,6 +152,7 @@ def write_scoresheets_second_round(label, width, height, information):
         event_name, group, round = '', '', ''
         limit = 'Result'
 
+    cutoff_time = ''
     if cutoff != 0:
         minutes, seconds = divmod(cutoff, 60)
         minutes = str(minutes)
@@ -154,7 +166,7 @@ def write_scoresheets_second_round(label, width, height, information):
     s.fontSize = font_size_event
     label.add(s)
 
-    # Competitor information: name, WCA ID and registration id 
+    # competitor information: name, WCA ID and registration id 
     comp_name = ''
     registration_id = ''
     ranking = ''
@@ -189,14 +201,14 @@ def write_scoresheets_second_round(label, width, height, information):
         label.add(shapes.Rect(10,height-83,22, 15, fillColor=colors.white))
         label.add(shapes.String(14, height-79, registration_id, fontSize=10, fontName='Arial'))
 
-    # Making header for result-boxes: # attempt, result (with (cumulative) limits), judge and competitor signature
+    # making header for result-boxes: # attempt, result (with (cumulative) limits), judge and competitor signature
     limit_width = stringWidth(limit, 'Arial', font_size_limit)
-    scoresheet_results_header(label, limit, limit_width, font_size_limit, height)
+    height = scoresheet_results_header(label, limit, limit_width, font_size_limit, height)
 
-    # Creation of result boxes, depending on # of attempts for event and round
-    height = scoresheet_result_boxes(label, height, format, event, cutoff_number, name)
+    # creation of result boxes, depending on # of attempts for event and round
+    height = scoresheet_result_boxes(label, height, width, format, event, cutoff_number, cutoff_time, name)
     
-    # Add unlabelled box for extras and provisional solves
+    # add unlabelled box for extras and provisional solves
     scoresheet_extra(label, height, width)
     
 def write_blank_sheets(label, width, height, information):    
@@ -205,14 +217,15 @@ def write_blank_sheets(label, width, height, information):
     
     scoresheet_blank_header(label, height, width, competition_name)
     
-    scoresheet_results_header(label, '', 0, 10, height)
+    height = scoresheet_results_header(label, '', 0, 10, height)
 
-    # Creation of result boxes, depending on # of attempts for event and round
-    height = scoresheet_result_boxes(label, height, '5', '', 0, name)
+    # creation of result boxes, depending on # of attempts for event and round
+    height = scoresheet_result_boxes(label, height, width, '5', '', 0, 0, name)
     
-    # Add unlabeled box for extras and provisional solves
+    # add unlabeled box for extras and provisional solves
     scoresheet_extra(label, height, width) 
 
+### this function needs review in the future ###
 def write_scoresheets(label, width, height, information):
     name = information[0]
     event_ids = information[1]
@@ -258,6 +271,7 @@ def write_scoresheets(label, width, height, information):
         event_name, group, round = '', '', ''
         limit = 'Result'
 
+    cutoff_time = ''
     if event['cutoff'] != 0:
         minutes, seconds = divmod(event['cutoff'], 60)
         minutes = str(minutes)
@@ -271,7 +285,7 @@ def write_scoresheets(label, width, height, information):
     s.fontSize = font_size_event
     label.add(s)
 
-    # Competitor information: name, WCA ID and registration id 
+    # competitor information: name, WCA ID and registration id 
     comp_name = ''
     registration_id = ''
     id = ''
@@ -307,12 +321,12 @@ def write_scoresheets(label, width, height, information):
         label.add(shapes.String(14, height-79, registration_id, fontSize=10, fontName='Arial'))
     label.add(shapes.String(width-50, height-80, group, fontSize=12, fontName='Arial'))
 
-    # Making header for result-boxes: # attempt, result (with (cumulative) limits), judge and competitor signature
+    # making header for result-boxes: # attempt, result (with (cumulative) limits), judge and competitor signature
     limit_width = stringWidth(limit, 'Arial', font_size_limit)
-    scoresheet_results_header(label, limit, limit_width, font_size_limit, height)
+    height = scoresheet_results_header(label, limit, limit_width, font_size_limit, height)
 
-    # Creation of result boxes, depending on # of attempts for event and round
-    height = scoresheet_result_boxes(label, height, event['format'], event['event'], str(event['cutoff_number']), name)
+    # creation of result boxes, depending on # of attempts for event and round
+    height = scoresheet_result_boxes(label, height, width, event['format'], event['event'], str(event['cutoff_number']), cutoff_time, name)
     
-    # Add unlabelled box for extras and provisional solves 
+    # add unlabelled box for extras and provisional solves 
     scoresheet_extra(label, height, width)
