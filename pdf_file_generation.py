@@ -12,7 +12,7 @@
     additional functions for scoresheets can be found in scoresheets_functions.py
 '''
 
-import os, sys, getpass, ftfy, unicodedata, random, labels, glob, datetime, calendar, pytz
+import os, sys, getpass, ftfy, unicodedata, random, labels, glob, datetime, calendar, pytz, requests, json
 from collections import Counter
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
 from reportlab.pdfbase.ttfonts import TTFont
@@ -27,6 +27,7 @@ wcif_file = ''
 def quit_program(wcif_file):
     if isinstance(wcif_file, str):
         if os.path.exists(wcif_file):
+            None
             os.remove(wcif_file)
     else:
         try: 
@@ -34,21 +35,22 @@ def quit_program(wcif_file):
         except NameError: 
             wcif_file = ''
         else:
-            os.remove(wcif_file.name)
+            None
+            #os.remove(wcif_file.name)
     sys.exit()
 
-def create_blank_sheets(write_blank_sheets, competition_name, scrambler_signature):
+def create_blank_sheets(write_blank_sheets, competition_name, scrambler_signature, blank_sheets_round_name):
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     scoresheet_list = []
     sheet = labels.Sheet(specs_scoresheets, write_blank_sheets, border=False)
     scoresheet_file = competition_name.replace(' ', '') + 'Blank_Scoresheets.pdf'
     for scoresheet_count in range(0, 4):
         scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
-    sheet.add_labels((name, competition_name, scrambler_signature) for name in scoresheet_list)
+    sheet.add_labels((name, competition_name, scrambler_signature, blank_sheets_round_name) for name in scoresheet_list)
     sheet.save(scoresheet_file)
     quit_program(wcif_file)
 
-def create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name, scrambler_signature):
+def create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name, scrambler_signature, events_ranking_by_speed):
     # format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)
@@ -58,7 +60,12 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
         if event['event'] != '333fm' and event['round'] == '1':
             scoresheet_list = []
             counter = 0
-            for name in result_string:
+            result_string_sorted_events = result_string
+            
+            if event['event'] in events_ranking_by_speed:
+                result_string_sorted_events = sorted(result_string, key=lambda x:x[event_ids[event['event']]])
+
+            for name in result_string_sorted_events:
                 if str(name[event_ids[event['event']]]).isdigit():
                     scoresheet_list.append(name)
                     counter += 1
@@ -67,6 +74,7 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
                 for filling in range(0,4-counter%4):
                     scoresheet_list.append(('name', 'country', 'id', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''))
             sheet.add_labels((name, event_ids, event_dict, round_counter, competitor_information, competition_name, event, scrambler_signature) for name in scoresheet_list)
+            
     if only_one_competitor:
         scoresheet_file = competition_name + '/' + competition_name_stripped + 'Scoresheets' + scoresheet_competitor_name.replace(' ', '') + '.pdf' 
     sheet.save(scoresheet_file)
@@ -98,7 +106,7 @@ def create_scoresheets_second_rounds(write_scoresheets_second_round, competition
 
 def create_registration_file(output_registration, registration_list, column_ids, competition_days):
     with open(output_registration, 'w') as registration_file:
-        print('Name, Country, WCA ID, Date of Birth, Gender, Days, Events, Guests, Comment, Check Box', file=registration_file)
+        print('Name, Country, WCA ID, Date of Birth, Gender, Days, Events, Guests, Comment', file=registration_file)
         for competitor in registration_list:
             competitor_info = ''
             for column in range(1, column_ids[min(column_ids, key=column_ids.get)]):
@@ -117,7 +125,6 @@ def create_registration_file(output_registration, registration_list, column_ids,
                 competitor_info += '0,'
             if not competitor[3]:
                 competitor_info += 'Newcomer (Check identification!)'
-            competitor_info += ','
             print(competitor_info, file=registration_file)
 
 def create_scrambling_file(output_scrambling, competition_name, scramblerlist):
@@ -161,7 +168,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
     # format information for nametags: usual DIN-A4 layout with 2 rows of 4 nametags each with a size of 85x55mm
     specs = labels.Specification(210, 297, 2, 4, 85, 55)
     
-    competitor_information_nametags = sorted(competitor_information, key=lambda x: x['name'])
+    competitor_information_nametags = sorted(competitor_information, key=lambda x: ftfy.fix_text(x['name']))
     sheet = labels.Sheet(specs, write_name, border=True)
     sheet.add_labels((name, competition_name) for name in competitor_information_nametags)
     nametag_file = competition_name + '/' + competition_name_stripped + 'Nametags.pdf'
@@ -169,14 +176,13 @@ def create_nametag_file(competitor_information, competition_name, competition_na
 
     if two_sided_nametags:
         if create_only_nametags:
-            result_string = get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name)
             for person in result_string:
                 for competitor in competitor_information:
                     if person[0] == competitor['name']:
                         person[2] = competitor['personId']
                         break
 
-        result_string_nametags = sorted(result_string, key=lambda x: x[0])
+        result_string_nametags = sorted(result_string, key=lambda x: ftfy.fix_text(x[0]))
         
         if len(result_string_nametags) % 2 == 1:
             result_string_nametags.append(('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',),)
@@ -194,7 +200,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
         pdf_splitter(grouping_nametag_file, competition_name)
         pdf_splitter(nametag_file, competition_name)
 
-        paths1 = glob.glob(competition_name + '/' + competition_name_stripped + '-nametags_*.pdf')
+        paths1 = glob.glob(competition_name + '/' + competition_name_stripped + 'Nametags_*.pdf')
         paths2 = glob.glob(competition_name + '/' + competition_name_stripped + '-nametags-grouping_*.pdf')
         paths = paths1 + paths2
         paths = sorted(paths, key=lambda x: x.split('_')[2])
@@ -203,6 +209,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
         os.remove(grouping_nametag_file)
 
     if create_only_nametags:
+        print('Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
         quit_program(wcif_file)
 
     return sheet
@@ -229,6 +236,7 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
             if only_one_competitor:
                 if ftfy.fix_text(scoresheet_competitor_name) == ftfy.fix_text(file_information[person][0]):
                     grouping_competitor = file_information[person]
+                    break
     if only_one_competitor:
         if grouping_competitor:
             return [grouping_competitor]
@@ -539,7 +547,7 @@ def write_schedule(label, width, height, information):
             event_start = event_start.split(':')[0] + ':' + event_start.split(':')[1]
             event_end = event['endTime'].split('T')[1][:-1]
             event_end = event_end.split(':')[0] + ':' + event_end.split(':')[1]
-            event_name = event['event_name'].replace('\\u0026', '&')
+            event_name = event['event_name']
 
             limit = ''
             format = ''
