@@ -82,7 +82,10 @@ def scoresheet_results_header(label, limit, limit_width, font_size_limit, height
 def scoresheet_result_boxes(label, height, width, format, event, cutoff_number, cutoff_time, name, scrambler_signature):
     height = height - 105
     number = 1
-    for attempts in range(0,int(format[-1:])):
+    number_of_attempts = int(format[-1:])
+    if (type(name) is dict and name['name'] == 'name') or (type(name) is list and name[0] == 'name'):
+        number_of_attempts = 5
+    for attempts in range(0,number_of_attempts):
         height -= 35
         label.add(shapes.Rect(10,height,30, 30, fillColor=colors.white))
         label.add(shapes.String(22,height+10,str(number),fontSize=12, fontName='Arial'))
@@ -103,7 +106,7 @@ def scoresheet_result_boxes(label, height, width, format, event, cutoff_number, 
             label.add(shapes.Line(160-shift, height+8, 200-shift, height+8,trokeColor=colors.black))
     
         # add cutoff information (if there is any)
-        if cutoff_number == str(number) and name[0]:
+        if cutoff_number == str(number) and name[0] != 'name':
             if cutoff_number == '1': 
                 cutoff = 'Continue if Attempt 1 is below ' + cutoff_time
                 indent = 70
@@ -132,7 +135,7 @@ def scoresheet_extra(label, height, width, scrambler_signature):
     label.add(shapes.Rect(245,height-55,30, 30, fillColor=colors.white))
     
 # extra header for blank scoresheets with fields for event, round, competitor name and id
-def scoresheet_blank_header(label, height, width, competition_name):
+def scoresheet_blank_header(label, height, width, competition_name, blank_sheets_round_name):
     text_width = width - 10
     font_size = 25
     comp_name_width = stringWidth(competition_name, 'Arial', font_size)
@@ -140,13 +143,24 @@ def scoresheet_blank_header(label, height, width, competition_name):
         font_size *= 0.95
         comp_name_width = stringWidth(competition_name, 'Arial', font_size)
     label.add(shapes.String(width/2, height-25, competition_name, textAnchor='middle', fontSize=font_size, fontName='Arial'))
+    
+    if blank_sheets_round_name:
+        font_size_round = 25
+        event_width = text_width + 1
+        while event_width > text_width:
+            font_size_round *= 0.95
+            event_width = stringWidth(blank_sheets_round_name, 'Arial', font_size_round)
+        s = shapes.String(width/2.0, height-55, blank_sheets_round_name, textAnchor='middle', fontName='Arial')
+        s.fontSize = font_size_round
+        label.add(s)
 
-    label.add(shapes.Rect(10,height-63,125, 17, fillColor=colors.white))
-    label.add(shapes.String(12, height-58, 'Event:', fontSize=12, fontName='Arial'))
-    label.add(shapes.Rect(140,height-63,65, 17, fillColor=colors.white))
-    label.add(shapes.String(142, height-58, 'Round:', fontSize=12, fontName='Arial'))
-    label.add(shapes.Rect(210,height-63,65, 17, fillColor=colors.white))
-    label.add(shapes.String(212, height-58, 'Group:', fontSize=12, fontName='Arial'))
+    else:
+        label.add(shapes.Rect(10,height-63,125, 17, fillColor=colors.white))
+        label.add(shapes.String(12, height-58, 'Event:', fontSize=12, fontName='Arial'))
+        label.add(shapes.Rect(140,height-63,65, 17, fillColor=colors.white))
+        label.add(shapes.String(142, height-58, 'Round:', fontSize=12, fontName='Arial'))
+        label.add(shapes.Rect(210,height-63,65, 17, fillColor=colors.white))
+        label.add(shapes.String(212, height-58, 'Group:', fontSize=12, fontName='Arial'))
     label.add(shapes.Rect(10,height-85,195, 17, fillColor=colors.white))
     label.add(shapes.String(12, height-80, 'Name:', fontSize=12, fontName='Arial'))
     label.add(shapes.Rect(210,height-85,65, 17, fillColor=colors.white))
@@ -201,7 +215,7 @@ def write_scoresheets_second_round(label, width, height, information):
         else:
             limit = 'Result (Time Limit ' + minutes + ':' + seconds + ' cumulative)'
     else:
-        limit = 'Result (Time Limit' + minutes + ':' + seconds + ')'
+        limit = 'Result (Time Limit ' + minutes + ':' + seconds + ')'
 
     font_size_event = 25
     while event_width > text_width:
@@ -251,7 +265,7 @@ def write_scoresheets_second_round(label, width, height, information):
     label.add(shapes.String(width-22, height-80, ranking, fontSize=12, fontName='Arial'))
 
     if not comp_name:
-        scoresheet_blank_header(label, height, width, competition_name)
+        scoresheet_blank_header(label, height, width, competition_name, '')
     else:
         label.add(shapes.String(10, height-16, competition_name, fontSize=10, fontName='Arial'))
 
@@ -275,8 +289,9 @@ def write_blank_sheets(label, width, height, information):
     name = information[0]
     competition_name = information[1]
     scrambler_signature = information[2]
+    blank_sheets_round_name = information[3]
     
-    scoresheet_blank_header(label, height, width, competition_name)
+    scoresheet_blank_header(label, height, width, competition_name, blank_sheets_round_name)
     
     height = scoresheet_results_header(label, '', 0, 10, height, scrambler_signature)
 
@@ -372,7 +387,7 @@ def write_scoresheets(label, width, height, information):
     
     label.add(shapes.String(width-78, height-16, id, fontSize=10, fontName='Arial'))
     if not comp_name:
-        scoresheet_blank_header(label, height, width, competition_name)
+        scoresheet_blank_header(label, height, width, competition_name, '')
     else:
         label.add(shapes.String(10, height-16, competition_name, fontSize=10, fontName='Arial'))
 

@@ -4,6 +4,8 @@
 Data extraction of WCIF and registration file (if used). Not too interesting, mainly a lot of parsing in .txt files (registration file and/or wcif file).    
 '''
 
+import json
+
 from competition_preparation_start import *
 
 # initialize various variables for parsing and analysis
@@ -24,198 +26,115 @@ if get_registration_information:
     countries = cur.fetchall()
 
     # Extract data from WCIF file
-    wcif_file = open(wcif_file, 'r', encoding='utf-8')
-    lines = wcif_file.readlines()
-    wcif_file.close()
-
-    for line in lines:
-        line = line.strip()
-        
-        ########## EVENTS ##########
-        # For every event parse information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
-        if line.find('"schedule":') != -1:
-            events = False
-            schedule = True
-         
-        if events:
-            if 'id' in line and (len(line) < 15 or '"333mbf"' in line):
-                event_id = line[7:-2]
-                event_counter_wca += 1
-            elif 'id' in line and len(line) < 23:
-                round_id = line[7:-2]
-                round_id = event_dict[round_id[:-3]] + round_id[-3:]
-                round_id = round_id.replace('-r', ' - Round ')
-            if 'scrambleGroupCount' in line:
-                group_count = int(line[21:-1])
-            if 'type' in line:
-                advancing_type = line[9:-2]
-            if 'level' in line:
-                advancing_competitiors = line[9:]
-                if advancing_type == 'percent':
-                    advancing_competitiors += '%'
-            if 'format' in line:
-                '''
-                if line[11:-2].isdigit():
-                    format = int(line[11:-2])
-                else:
-                    format = formats[line[11:-2]]
-                '''
-                format = formats[line[11:-2]]
-            if 'centiseconds' in line:
-                limit = int(int(line[16:-1]) / 100)
-            if 'numberOfAttempts' in line:
-                cutoff_number = int(line[20:-1])
-            if 'attemptResult' in line and 'type' not in line:
-                cutoff = int(int(line[17:]) / 100)
-
-            if cumulative_rounds and ']' in line:
-                cumulative_rounds = False
-            if cumulative_rounds and line[1:-1]:
-                if cumulative:
-                    cumulative += ', '
-                line = line.replace(',', '')
-                line = line[1:-1]
-                for name in event_dict:
-                    if line[:-3] == name:
-                        line = event_dict[name]
-                cumulative += line
-            if 'cumulativeRoundIds' in line:
-                cumulative_rounds = True
-        if round_id != '' and group_count > 0:
-            group_list.append((event_id, round_id, group_count))
-            if event_id == '333mbf':
-                limit = 3600
-            event_infos = {'event': event_id, 'round': round_id[-1:], 'format': format, 'cutoff_number': cutoff_number, 'cutoff': cutoff, 'limit': limit, 'cumulative': cumulative, 'advancing': advancing_competitiors}
-            event_info.append(event_infos)
-            event_ids_wca = event_ids_wca + (event_id,)
-            cutoff_number, cutoff, group_count = 0, 0, 0
-            cumulative, round_id, advancing_type, advancing_competitiors = '', '', '', ''
-            limit = 600
+    lines = competition_wcif_file.splitlines()
+    wca_json = json.loads(competition_wcif_file)
     
-        if line.find('"events":') != -1:
-            events = True
-            persons = False
-
-
-        ########## REGISTRATION ##########
+    ########## REGISTRATION ##########
         # get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for
-        if persons:
-            if 'name' in line:
-                name = line[9:-2]
-                name = name.split(' (')[0]
-                for number in range(0, 3):
-                    if name[-1:] == ' ':
-                        name = name[:-1]
-            if 'wcaId' in line:
-                if 'null' not in line:
-                    wca_id = line[10:-2]
-                else:
-                    wca_id = ''
-            if 'birthdate' in line:
-                dob = line[14:-2]
-            if 'gender' in line:
-                gender = line[11:-2]
-            if 'country' in line:
-                iso = line[16:-2]
-                comp_country = ""
-                for country in countries:
-                    if iso == country['iso2']:
-                        comp_country = country['id']
-            if 'guests' in line:
-                guests = line[10:-1]
-            if events_now and ']' in line:
-                events_now = False
-            if events_now:
-                line = line.replace(',', '')
-                event = line[1:-1]
-                all_events += (event,)
-                registered_events += (event,)
-            if 'eventIds' in line:
-                events_now = True
-            if roles and ']' in line:
-                roles = False
-            if roles:
-                line = line.replace(',', '')
-                if line:
-                    if competitor_role:
-                        competitor_role += ', '
-                    if 'delegate' in line:
-                        role = 'WCA ' + line[1:-1].upper()
-                    else:
-                        role = line[1:-1].upper()
-                    competitor_role += role
-            if 'roles' in line:
-                roles = True
-            if 'status' in line:
-                if 'accepted' in line:
-                    accepted = True
-            if 'personalBests' in line:
-                information = {'name': name, 'personId': wca_id, 'dob': dob, 'gender': gender, 'country': comp_country, 'role': competitor_role, 'guests': guests, 'registered_events': registered_events, 'registration_id': registration_id}
-                registered_events = ()
-                if accepted or not wca_info:
-                    if create_scoresheets_second_rounds_bool:
-                        for comp in competitors:
-                            if name == ftfy.fix_text(comp['name']).split(' (')[0]:
-                                information.update({'ranking': comp['ranking']})
-                                competitor_information_wca.append(information)
-                    else:
-                        competitor_information_wca.append(information)
-                    registration_id += 1
-
-                accepted = False
-                competitor_role = ''
-
-        if line.find('"persons":') != -1:
-            persons = True
+    registration_id = 1    
+    for registrations in wca_json['persons']:
+        registered_events = ()
+        competitor_role = ''
+        
+        for country in countries:
+            if country['iso2'] == registrations['countryIso2']:
+                comp_country = country['id']
+        if registrations['roles']:
+            for role in registrations['roles']:
+                competitor_role += role.replace('delegate', 'WCA DELEGATE').upper() + ','
+            competitor_role = competitor_role[:-1]
+        for competitor_events in registrations['registration']['eventIds']:
+            all_events += (competitor_events,)
+            registered_events += (competitor_events,)
             
-        ########## SCHEDULE ##########
-        # get schedule information from wca website
-        # used for sorting of scramblerlist + creating a PDF containing the schedule
-        if schedule:
-            if 'startDate' in line:
-                competition_start_day = line[14:-2]
-                year = int(competition_start_day.split('-')[0])
-                month = int(competition_start_day.split('-')[1])
-                day = int(competition_start_day.split('-')[2])
-            if 'numberOfDays' in line:
-                competition_days = int(line[16:-1])
-            if 'timezone' in line:
-                timezone_competition = line[13:-2] 
-            if 'id' in line:
-                schedule_id = line[6:-1]
-            if 'name' in line:
-                schedule_event_name = line[9:-2].replace(',', ' -').replace(' Cube', '')
-            if 'activityCode' in line:
-                schedule_activity_code = line[17:-2]
-            if 'startTime' in line:
-                schedule_event_start_utc = line[14:-2]
-                if not full_schedule:
-                    timezone_localize = pytz.timezone(timezone_competition)
-                    timezone_utc_offset = int(str(timezone_localize.localize(datetime.datetime(year, month, day, int(schedule_event_start_utc.split('T')[1].split(':')[0]), 0, 0))).split('+')[1].split(':')[0]) 
+        information = {'name': registrations['name'].split(' (')[0].strip(), 'personId': registrations['wcaId'], 'dob': registrations['birthdate'], 'gender': registrations['gender'], 'country': comp_country, 'role': competitor_role, 'guests': str(registrations['registration']['guests']), 'registered_events': registered_events, 'registration_id': registration_id}
+        if not registrations['wcaId']:
+            information.update({'personId': ''})
+        if registrations['registration']['status'] == 'accepted':
+            if create_scoresheets_second_rounds_bool:
+                for comp in competitors:
+                    if registrations['name'].split(' (')[0].strip() == ftfy.fix_text(comp['name']).split(' (')[0]:
+                        information.update({'ranking': comp['ranking'], 'registration_id': comp['competitor_id']})
+                        competitor_information_wca.append(information)
+            elif use_cubecomps_ids:
+                for comp in competitors_api:
+                    if registrations['name'].split(' (')[0].strip() == ftfy.fix_text(comp['name']).split(' (')[0]:
+                        information.update({'registration_id': comp['competitor_id']})
+                        competitor_information_wca.append(information)
+            else:
+                competitor_information_wca.append(information)
+            registration_id += 1
+
+    ########## EVENTS ##########
+    # For every event parse information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
+    for wca_events in wca_json['events']:
+        for wca_rounds in wca_events['rounds']:
+            cutoff_number = 0
+            cutoff = 0
+            limit = 0
+            advancing_competitors = ''
+            cumulative = ''
+            if wca_rounds['cutoff']:
+                if 'numberOfAttempts' in wca_rounds['cutoff']:
+                    cutoff_number = wca_rounds['cutoff']['numberOfAttempts']
+                if 'attemptResult' in wca_rounds['cutoff']:
+                    cutoff = int(wca_rounds['cutoff']['attemptResult'] / 100)
+            if 'timeLimit' in wca_rounds:
+                limit = int(wca_rounds['timeLimit']['centiseconds'] / 100)
+                if wca_rounds['timeLimit']['cumulativeRoundIds']:
+                    for cumulative_event in wca_rounds['timeLimit']['cumulativeRoundIds']:
+                        cumulative += event_dict[cumulative_event[:-3]] + ', '
+                    cumulative = cumulative[:-2]
+            if wca_rounds['advancementCondition']:
+                if wca_rounds['advancementCondition']['type'] == 'percent':
+                    advancing_competitors = str(wca_rounds['advancementCondition']['level']) + '%'
+                else:
+                    advancing_competitors = str(wca_rounds['advancementCondition']['level'])
+            
+            wca_event_infos = {'event': wca_events['id'], 'round': wca_rounds['id'][-1:], 'format': formats[wca_rounds['format']], 'cutoff_number': cutoff_number, 'cutoff': cutoff, 'limit': limit, 'cumulative': cumulative, 'advancing': advancing_competitors}
+            event_info.append(wca_event_infos)
+            event_ids_wca = event_ids_wca + (wca_events['id'],)
+            
+            group_list.append((wca_events['id'], event_dict[wca_events['id']] + wca_rounds['id'][-3:].replace('-r', ' - Round '), wca_rounds['scrambleGroupCount'], advancing_competitors))
+
+    ########## SCHEDULE ##########
+    # get schedule information from wca website
+    # used for sorting of scramblerlist + creating a PDF containing the schedule 
+    if wca_json['schedule']['venues']:   
+        timezone_competition = wca_json['schedule']['venues'][0]['timezone']
+        competition_days = wca_json['schedule']['numberOfDays']
+        competition_start_day = wca_json['schedule']['startDate']
+        year = int(competition_start_day.split('-')[0])
+        month = int(competition_start_day.split('-')[1])
+        day = int(competition_start_day.split('-')[2])
+        for schedule_events in wca_json['schedule']['venues'][0]['rooms'][0]['activities']:
+            schedule_round_id = ''
+            if schedule_events['name'][-1:].isdigit():
+                schedule_round_id = str(schedule_events['name'][-1:])
+            schedule_event_start_utc = schedule_events['startTime']
+            if not full_schedule:
+                timezone_localize = pytz.timezone(timezone_competition)
+                timezone_utc_offset = int(str(timezone_localize.localize(datetime.datetime(year, month, day, int(schedule_event_start_utc.split('T')[1].split(':')[0]), 0, 0))).split('+')[1].split(':')[0]) 
+            schedule_event_start = schedule_event_start_utc.split('T')[0] + 'T'
+            if (int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
+                schedule_event_start += '0' + str(int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
+            else:
+                schedule_event_start += str(int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
+            schedule_event_start += ':' + schedule_event_start_utc.split('T')[1].split(':')[1] + ':' + schedule_event_start_utc.split('T')[1].split(':')[2]
+            
+            schedule_event_end_utc = schedule_events['endTime']
+            schedule_event_end = schedule_event_end_utc.split('T')[0] + 'T'
+            if (int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
+                schedule_event_end += '0' + str(int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
+            else:
+                schedule_event_end += str(int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
+            schedule_event_end += ':' + schedule_event_end_utc.split('T')[1].split(':')[1] + ':' + schedule_event_end_utc.split('T')[1].split(':')[2]
                 
-                schedule_event_start = schedule_event_start_utc.split('T')[0] + 'T'
-                if (int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
-                    schedule_event_start += '0' + str(int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-                else:
-                    schedule_event_start += str(int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-                schedule_event_start += ':' + schedule_event_start_utc.split('T')[1].split(':')[1] + ':' + schedule_event_start_utc.split('T')[1].split(':')[2]
-            if 'endTime' in line:
-                schedule_event_end_utc = line[12:-2]
-                
-                schedule_event_end = schedule_event_end_utc.split('T')[0] + 'T'
-                if (int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
-                    schedule_event_end += '0' + str(int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-                else:
-                    schedule_event_end += str(int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-                schedule_event_end += ':' + schedule_event_end_utc.split('T')[1].split(':')[1] + ':' + schedule_event_end_utc.split('T')[1].split(':')[2]
-            if 'childActivities' in line:
-                schedule_event_id = schedule_activity_code.split('-')[0]
-                if schedule_event_name[-1:].isdigit():
-                    schedule_round_id = schedule_event_name[-1:]
-                else:
-                    schedule_round_id = ''
-                event_information = {'id': schedule_id, 'round_number': schedule_round_id, 'event_id': schedule_event_id, 'event_name': schedule_event_name, 'acitivityCode': schedule_activity_code, 'startTime': schedule_event_start, 'endTime': schedule_event_end}
-                full_schedule.append(event_information)
+            wca_event_information = {'id': str(schedule_events['id']), 'round_number': schedule_round_id, 'event_id': schedule_events['activityCode'].split('-')[0], 'event_name': schedule_events['name'].replace(',', ' -').replace(' Cube', ''), 'acitivityCode': schedule_events['activityCode'], 'startTime': schedule_event_start, 'endTime': schedule_event_end}
+            full_schedule.append(wca_event_information)
+        else:
+            print('No schedule found on WCA website.')
+
 
     if wca_info and not create_only_schedule:
         competitor_information = competitor_information_wca
@@ -226,7 +145,7 @@ if get_registration_information:
         wca_ids = ()
     
         for person in competitor_information:
-            event_string = [person['guests'], unicodedata.normalize('NFKD', person['name']), person['country'], person['personId'], person['dob'], person['country']]
+            event_string = [person['guests'], unicodedata.normalize('NFKD', person['name']), person['country'], person['personId'], person['dob'], person['gender']]
             if person['personId']:
                 wca_ids = wca_ids + (person['personId'],)
             for index in range(0, number_events):
@@ -259,7 +178,7 @@ if get_registration_information:
     round_counter = Counter(event_ids_wca)
 
     if group_list:
-        print('Grouping sucessfully imported.')
+        print('WCA information sucessfully imported.')
     else:
         print('An error occured while importing the rounds and groups information from the WCIF file, script aborted.')
         print('Please make sure to enter all necessary information in the "Manage events" tab on the WCA competition page.')
@@ -325,14 +244,12 @@ if get_registration_information:
     if wca_info:
         registration_list = registration_list_wca
 
-
 ### Parse registration file
 if read_only_registration_file:
     file = open(file_name)
     
     all_data = []
-    wca_ids = ()
-    event_list = ()
+    wca_ids, event_list = (), ()
     
     line_count = 0
     
@@ -407,13 +324,12 @@ if full_schedule:
 elif create_schedule:
     print('')
     print('ERROR!! No schedule found on WCA website. Script continues without creating schedule.')
-    print('')
-    
+
 ### Create registration file (.csv)
 if create_registration_file_bool:
     print('')
     print('Create registration file...')
-    output_registration = competition_name + '/registration.csv'
+    output_registration = competition_name + '/' + competition_name_stripped + 'Registration.csv'
     create_registration_file(output_registration, registration_list, column_ids, competition_days)
 
     print('Registration file successfully created.')
