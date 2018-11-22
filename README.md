@@ -15,7 +15,7 @@ This script creats various things an organizer needs to have for a competition:
 This script was tested on Mac OS 10.13.4 with python 3.5.2 and 3.7.0
     
 ## How
-Make sure to add all event information in the 'Manage events' tab for your competition on the WCA website. To run the script, type into your terminal 'pyton competition_grouping_scrambling.py' and follow the steps shown in the window.
+Make sure to add all event information in the 'Manage events' tab for your competition on the WCA website. To run the script, type into your terminal 'python3 competition_grouping_scrambling.py' and follow the steps shown in the window.
     
 Files that need to be in the same folder:
 - comeptition_preparation_start.py
