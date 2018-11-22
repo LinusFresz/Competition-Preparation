@@ -1,5 +1,4 @@
 # Competition-Preparation
-I've done my work with developing a competition preparation script, here you can see the results.
 
 ## What
 This script creats various things an organizer needs to have for a competition:
@@ -10,7 +9,7 @@ This script creats various things an organizer needs to have for a competition:
 - create PDF-schedule from WCA website information
 - scoresheets for first rounds
 - scoresheets for consecutive rounds
-- blank scoresheets
+- blank scoresheets (with editable competition and round name)
     
 ### System information: 
 This script was tested on Mac OS 10.13.4 with python 3.5.2 and 3.7.0
@@ -24,13 +23,12 @@ Files that need to be in the same folder:
 - competition_grouping_scrambling.py
 - wca_registration.py
 - information_analysis.py
-- chromedriver_data.py
 - pdf_file_generation.py
-- chromedriver (http://chromedriver.chromium.org/downloads)
+- scoresheets_functions.py
 - Trebuchet.ttf ([TrueType font](https://www.fontpalace.com/font-download/Trebuchet+MS/))
     
 Please be aware that you need a WCA database connection. All necessary files can be found here: [/LinusFresz/python-WCA](https://github.com/LinusFresz/python-WCA) (section 'setup') 
     
-A precompiled version can be found here: [Google Drive](https://drive.google.com/drive/folders/1ZNBX43MzM5jKLJOeDsSuLcwJqiyEOU1d?usp=sharing) (IMPORTANT: **OUTDATED**). Please use the contact address below to get an up-to-date version. 
+A precompiled version can be found here: [Google Drive](https://drive.google.com/drive/folders/1ZNBX43MzM5jKLJOeDsSuLcwJqiyEOU1d?usp=sharing) (IMPORTANT: **OUTDATED** and not bug free). Please use the contact address below to get an up-to-date version. 
 
 For further details and support, please contact Linus Frész, linuf95@gmail.com
