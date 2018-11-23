@@ -1,33 +1,7 @@
 #!/usr/bin/python
 
 ''' 
-    This script creats various things an organizer needs to have for a competition:
-    - competitor groupings
-    - scrambling list for all events and rounds (except FMC)
-    - nametags, option to write grouping and scrambling for each event on the back (two-sided nametags)
-    - registration file for check-in
-    - create PDF-schedule from WCA website information
-    - scoresheets for first rounds
-    - scoresheets for consecutive rounds
-    - blank scoresheets (with editable competition and round name)
-    
-    System information: 
-    This script was tested on Mac OS 10.13.4 with python 3.5.2 and 3.7.0
-    
-    HOW TO:
-    Make sure to add all event information in the 'Manage events' and 'Schedule' (optional) tabs for your competition on the WCA website. To run the script, type into your terminal 'pyton competition_grouping_scrambling.py' (or 'python3 competition_grouping_scrambling.py') and follow the steps shown in the window.
-    
-    Files that need to be in the same folder:
-    - comeptition_preparation_start.py
-    - competition_grouping_scrambling.py
-    - wca_registration.py
-    - information_analysis.py
-    - pdf_file_generation.py
-    - scoresheets_functions.py
-    
-    Please be aware that you need a WCA database connection. All necessary files can be found here: https://github.com/LinusFresz/python-WCA (section 'setup') 
-    
-    For further details and support, please contact Linus Frész, linuf95@gmail.com
+    Please read the README.md to get further information.
 '''
 
 from wca_registration import *
