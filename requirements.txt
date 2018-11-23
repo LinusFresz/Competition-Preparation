@@ -1,0 +1,8 @@
+ftfy
+requests
+pylabels
+pytz
+PyPDF2
+pymysql
+reportlab
+datetime
