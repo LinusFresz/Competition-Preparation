@@ -4,8 +4,6 @@
 Data extraction of WCIF and registration file (if used). Not too interesting, mainly a lot of parsing in .txt files (registration file and/or wcif file).    
 '''
 
-import json
-
 from competition_preparation_start import *
 
 # initialize various variables for parsing and analysis
@@ -145,7 +143,7 @@ if get_registration_information:
         wca_ids = ()
     
         for person in competitor_information:
-            event_string = [person['guests'], unicodedata.normalize('NFKD', person['name']), person['country'], person['personId'], person['dob'], person['gender']]
+            event_string = [person['guests'], ftfy.fix_text(person['name']), person['country'], person['personId'], person['dob'], person['gender']]
             if person['personId']:
                 wca_ids = wca_ids + (person['personId'],)
             for index in range(0, number_events):

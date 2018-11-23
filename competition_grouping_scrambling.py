@@ -183,7 +183,7 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
                     not_double = checking(ranking, event_ids, event, groups, rank, group_number, round_number, scrambler, first_place, last_place, scrambling_run_id, result_string)
                     
                     if not_double:
-                        new_scrambler = unicodedata.normalize('NFKD', ranking[rank][0])
+                        new_scrambler = ftfy.fix_text(ranking[rank][0])
                         scramblerlist[scrambler].append(new_scrambler)
 
                     if loop_counter % 10000 == 0:

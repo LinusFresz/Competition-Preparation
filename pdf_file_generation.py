@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 '''
     This file contains all functions to generate files:
     PDF:
@@ -12,7 +14,7 @@
     additional functions for scoresheets can be found in scoresheets_functions.py
 '''
 
-import os, sys, getpass, ftfy, unicodedata, random, labels, glob, datetime, calendar, pytz, requests, json
+import os, sys, getpass, ftfy, random, labels, glob, datetime, calendar, pytz, requests, json
 from collections import Counter
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
 from reportlab.pdfbase.ttfonts import TTFont
