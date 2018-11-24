@@ -1,0 +1,5 @@
+static/config.py
+__pycache__
+static/__pycache__
+db/__pycache__
+Trebuchet.ttf
