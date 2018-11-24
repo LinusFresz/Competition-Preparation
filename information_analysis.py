@@ -128,8 +128,8 @@ if get_registration_information:
                 
             wca_event_information = {'id': str(schedule_events['id']), 'round_number': schedule_round_id, 'event_id': schedule_events['activityCode'].split('-')[0], 'event_name': schedule_events['name'].replace(',', ' -').replace(' Cube', ''), 'acitivityCode': schedule_events['activityCode'], 'startTime': schedule_event_start, 'endTime': schedule_event_end}
             full_schedule.append(wca_event_information)
-        else:
-            print('No schedule found on WCA website.')
+    else:
+        print('No schedule found on WCA website.')
 
 
     if wca_info and not create_only_schedule:
@@ -158,7 +158,7 @@ if get_registration_information:
         if not registration_list_wca:
             print('')
             print('ERROR!! WCA registration not used for this competition. Please select registration file for import. Script aborted.')
-            quit_program(wcif_file)
+            sys.exit()
         registration_list_wca = sorted(sorted(registration_list_wca, key=lambda x: x[1]), key=lambda x: x[1].split()[-1])
     
         event_list = ()
@@ -178,7 +178,7 @@ if get_registration_information:
     else:
         print('An error occured while importing the rounds and groups information from the WCIF file, script aborted.')
         print('Please make sure to enter all necessary information in the "Manage events" tab on the WCA competition page.')
-        quit_program(wcif_file)
+        sys.exit()
 
     ### Get data from csv-export
     # same as for the WCA registration, get competitor information from registration file (if used): name, WCA ID, date of birth, gender, country and events registered for
@@ -202,7 +202,7 @@ if get_registration_information:
                 if (new_creation and not row.startswith('Status')) or (reading_grouping_from_file and not 'Name' in row):
                     print('')
                     print('ERROR!! Missing header-line in registration file, script aborted.')
-                    quit_program(wcif_file)
+                    sys.exit()
                 counter = 0
                 for event in row_list:
                     if event in column_ids:
@@ -235,7 +235,7 @@ if get_registration_information:
         
         if event_counter != event_counter_wca:
             print('ERROR!! Number of events from WCA Website does not match number of events in registration data. Please use correct registration file. Abort script.')
-            quit_program(wcif_file)
+            sys.exit()
 
     if wca_info:
         registration_list = registration_list_wca
@@ -258,7 +258,7 @@ if read_only_registration_file:
             if not row.startswith('Status') or not 'Name' in row:
                 print('')
                 print('ERROR!! Missing header-line in registration file, script aborted.')
-                quit_program(wcif_file)
+                sys.exit()
             counter = 0
             for event in row_list:
                 if event in column_ids:
@@ -315,7 +315,7 @@ if full_schedule:
     if create_schedule:
         create_schedule_file(competition_name, competition_name_stripped, full_schedule, event_info, competition_days, competition_start_day, timezone_utc_offset, formats, format_names, round_counter)
         if create_only_schedule:
-            quit_program(wcif_file)
+            sys.exit()
             
 elif create_schedule:
     print('')
@@ -332,4 +332,4 @@ if create_registration_file_bool:
     print('')
 
     if create_only_registration_file:
-        quit_program(wcif_file)
+        sys.exit()

@@ -12,19 +12,19 @@ def error_handling_wcif(competition_name, store_file, competition_page):
     if 'Not logged in' in competition_page:
         print('ERROR!!')
         print('While logging into WCA website, either WCA ID or password was wrong. Aborted script, please retry.')
-        quit_program(wcif_file)
+        sys.exit()
     elif 'Competition with id' in competition_page:
         print('ERROR!!')
         print('Competition with name ' + competition_name + ' not found on WCA website.')
-        quit_program(wcif_file)
+        sys.exit()
     elif 'Not authorized to manage' in competition_page:
         print('ERROR!!')
         print('You are not authorized to manage this competition. Please only select your competitions.')
-        quit_program(wcif_file)
+        sys.exit()
     elif "The page you were looking for doesn't exist." in competition_page:
         print('ERROR!!')
         print('Misstiped competition link, please enter correct link.')
-        quit_program(wcif_file)
+        sys.exit()
     else:
         if not os.path.exists(competition_name):
             os.makedirs(competition_name)

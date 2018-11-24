@@ -24,6 +24,7 @@ while True:
     print('6. Schedule')
     print('7. Scoresheets from grouping-file (all)')
     print('8. Scoresheets from grouping-file (for one person)')
+    print('9. Quit')
     program_type = input('')
     print('')
     if program_type.isdigit():
@@ -59,6 +60,9 @@ while True:
             reading_grouping_from_file = True
             only_one_competitor = True
             break
+        elif program_type == '9':
+            print('Quitting programm.')
+            sys.exit()
     
     print("Wrong input, please enter one of the available options.")
     print('')
@@ -146,7 +150,7 @@ elif create_only_schedule:
     wca_info = wca_registration_system()
     if not wca_info:
         print('ERROR!! Schedule can only be generated from WCA website data. Script aborted.')
-        quit_program(wcif_file)
+        sys.exit()
     wca_password, wca_mail, competition_name, competition_name_stripped, wcif_file = wca_registration(bool)
     two_sided_nametags = False
     
@@ -163,7 +167,7 @@ elif create_scoresheets_second_rounds_bool:
         cubecomps_id.split('//')[1].split('?')[1].split('&')[2].split('=')[1]
     except IndexError:
         print('ERROR! Not a valid cubecomps link, script aborted.')
-        quit_program(wcif_file)
+        sys.exit()
     
     print('Get round information from cubecomps.com...')
     print('')
@@ -196,7 +200,7 @@ elif create_scoresheets_second_rounds_bool:
         round_number = int(current_round_number) + 1
     else:
         print('Please open next round before using script. Script aborted.')
-        quit_program(wcif_file)
+        sys.exit()
 
     next_round_name = event_round_name.split(' - ')[0].replace(' Cube', '') + ' -' + event_round_name.split(' - ')[1].replace('First', '').replace('Second', '').replace('Semi', '').replace('Combined ', ' Round') + ' ' + str(round_number)
     event_round_name = next_round_name.replace(' 4', '')

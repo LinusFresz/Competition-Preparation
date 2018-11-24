@@ -20,24 +20,15 @@ from reportlab.pdfbase.pdfmetrics import registerFont, stringWidth
 from reportlab.graphics import shapes
 from reportlab.lib import colors
 
+if not os.path.isfile('Trebuchet.ttf'):
+    print("ERROR!! File 'Trebuchet.ttf' does not exist. Please download from \n",
+           "https://www.fontpalace.com/font-download/Trebuchet+MS/\n and add to",
+           "{}/.".format(os.path.dirname(os.path.abspath(__file__))))
+    sys.exit()
+
 registerFont(TTFont('Arial', 'Trebuchet.ttf'))
 
 wcif_file = ''
-
-def quit_program(wcif_file):
-    if isinstance(wcif_file, str):
-        if os.path.exists(wcif_file):
-            None
-            os.remove(wcif_file)
-    else:
-        try: 
-            wcif_file
-        except NameError: 
-            wcif_file = ''
-        else:
-            None
-            #os.remove(wcif_file.name)
-    sys.exit()
 
 def create_blank_sheets(write_blank_sheets, competition_name, scrambler_signature, blank_sheets_round_name):
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
@@ -48,7 +39,7 @@ def create_blank_sheets(write_blank_sheets, competition_name, scrambler_signatur
         scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
     sheet.add_labels((name, competition_name, scrambler_signature, blank_sheets_round_name) for name in scoresheet_list)
     sheet.save(scoresheet_file)
-    quit_program(wcif_file)
+    sys.exit()
 
 def create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, write_scoresheets, scoresheet_competitor_name, scrambler_signature, events_ranking_by_speed):
     # format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
@@ -102,7 +93,7 @@ def create_scoresheets_second_rounds(write_scoresheets_second_round, competition
     
     print('')
     print('Scoresheets for ' + event_round_name + ' sucessfully saved in folder ' + competition_name + '.')
-    quit_program(wcif_file)
+    sys.exit()
 
 def create_registration_file(output_registration, registration_list, column_ids, competition_days):
     with open(output_registration, 'w') as registration_file:
@@ -129,7 +120,7 @@ def create_registration_file(output_registration, registration_list, column_ids,
 
 def create_scrambling_file(output_scrambling, competition_name, scramblerlist):
     with open(output_scrambling, 'w') as scrambling_file:
-        header = 'Event, Group, Scrambler 1, Scrambler 2, Scrambler 3, Scrambler 4, Scrambler 5'
+        header = 'Event,Group,Scrambler 1,Scrambler 2,Scrambler 3,Scrambler 4,Scrambler 5'
 
         print('Scrambling List ' + competition_name, file = scrambling_file)
 
@@ -142,7 +133,7 @@ def create_scrambling_file(output_scrambling, competition_name, scramblerlist):
                 sorted_scramblers = sorted(scramblers, key=lambda x: x.split()[-1])
                 for scrambler_id in range(0, len(scramblers)):
                     scramblers_clean += (sorted_scramblers[scrambler_id].replace('dummy name', ''),)
-                print(scrambler[0], ',', scrambler[1], ',', scramblers_clean[0], ',', scramblers_clean[1], ',', scramblers_clean[2], ',', scramblers_clean[3], ',', scramblers_clean[4], file = scrambling_file)
+                print(scrambler[0] + ',' + str(scrambler[1]) + ',' + scramblers_clean[0] + ',' + scramblers_clean[1] + ',' + scramblers_clean[2] + ',' + scramblers_clean[3] + ',' + scramblers_clean[4], file = scrambling_file)
                 
 def create_grouping_file(output_grouping, event_ids, event_dict, result_string):
     with open(output_grouping, 'w') as grouping_file:
@@ -210,7 +201,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
 
     if create_only_nametags:
         print('Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
-        quit_program(wcif_file)
+        sys.exit()
 
     return sheet
     
@@ -243,7 +234,7 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
         else:
             print('')
             print("ERROR!! Competitor '" + scoresheet_competitor_name + "' not found.")
-            quit_program(wcif_file)
+            sys.exit()
     return result_string
 
 def pdf_splitter(path, competition_name):

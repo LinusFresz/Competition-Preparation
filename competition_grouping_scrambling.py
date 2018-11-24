@@ -489,4 +489,4 @@ if new_creation or blank_sheets or reading_grouping_from_file:
     print('')
 
     if reading_grouping_from_file:
-        quit_program(wcif_file)
+        sys.exit()
