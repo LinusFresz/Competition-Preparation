@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import importlib, sys
 
 static_folder_found = importlib.util.find_spec('static') is not None

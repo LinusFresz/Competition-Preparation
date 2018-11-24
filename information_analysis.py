@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 '''
 Data extraction of WCIF and registration file (if used). Not too interesting, mainly a lot of parsing in .txt files (registration file and/or wcif file).    
 '''

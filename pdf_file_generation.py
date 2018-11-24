@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 '''
     This file contains all functions to generate files:
     PDF:

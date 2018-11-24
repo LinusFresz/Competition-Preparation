@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 '''
     Additional functions for the scoresheet creation.
 '''

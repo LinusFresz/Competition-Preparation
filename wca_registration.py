@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 '''
 Multiple functions to log in on the WCA website and catch all necessary competition and competitor registration information
 '''

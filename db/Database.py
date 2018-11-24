@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import pymysql, sys
 from pymysql.cursors import Cursor
 

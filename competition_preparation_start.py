@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 ''' 
     Please read the README.md to get further information.
 '''
