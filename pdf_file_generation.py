@@ -12,13 +12,49 @@
     additional functions for scoresheets can be found in scoresheets_functions.py
 '''
 
-import os, sys, getpass, ftfy, random, labels, glob, datetime, calendar, pytz, requests, json
+import os, sys, getpass, ftfy, random, labels, glob, datetime, calendar, pytz, requests, json, csv
 from collections import Counter
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import registerFont, stringWidth
 from reportlab.graphics import shapes
 from reportlab.lib import colors
+
+def create_two_strings_out_of_one(input_string, font_size, width):
+    input_string_string1 = ''
+    for substring in input_string.split():
+        new_string = ''.join([input_string_string1, substring, ' '])
+        if stringWidth(new_string, 'Arial', font_size) < width:
+            input_string_string1 = ''.join([input_string_string1, substring, ' '])
+        else: 
+            break
+    input_string_string2 = input_string.replace(input_string_string1, '')
+    return (input_string_string1, input_string_string2)
+
+def enlarge_string(input_string, add_string, string_length):
+    while len(input_string) < string_length:
+        input_string = ''.join([add_string, input_string])
+    return input_string
+    
+def enlarge_string_width(input_string, add_begin, add_end, wanted_width, font_size):
+    width = stringWidth(input_string, 'Arial', font_size)
+    while width < wanted_width:
+        input_string = '{}{}{}'.format(add_begin, input_string, add_end)
+        width = stringWidth(input_string, 'Arial', font_size)
+    return (input_string, width)
+
+def enlarge_string_size(input_string, wanted_width, font_size):
+    width = stringWidth(input_string, 'Arial', font_size)    
+    while width > wanted_width:
+        font_size *= 0.95
+        width = stringWidth(input_string, 'Arial', font_size)
+    return (width, font_size)
+
+def format_minutes_and_seconds(time_string):
+    minutes, seconds = divmod(time_string, 60)
+    minutes = str(minutes)
+    seconds = enlarge_string(str(seconds), '0', 2)
+    return (minutes, seconds)
 
 if not os.path.isfile('Trebuchet.ttf'):
     print("ERROR!! File 'Trebuchet.ttf' does not exist. Please download from \n",
@@ -28,13 +64,11 @@ if not os.path.isfile('Trebuchet.ttf'):
 
 registerFont(TTFont('Arial', 'Trebuchet.ttf'))
 
-wcif_file = ''
-
 def create_blank_sheets(write_blank_sheets, competition_name, scrambler_signature, blank_sheets_round_name):
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     scoresheet_list = []
     sheet = labels.Sheet(specs_scoresheets, write_blank_sheets, border=False)
-    scoresheet_file = competition_name.replace(' ', '') + 'Blank_Scoresheets.pdf'
+    scoresheet_file = '{}Blank_Scoresheets.pdf'.format(competition_name.replace('  ', ''))
     for scoresheet_count in range(0, 4):
         scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
     sheet.add_labels((name, competition_name, scrambler_signature, blank_sheets_round_name) for name in scoresheet_list)
@@ -45,7 +79,7 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
     # format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)
-    scoresheet_file = competition_name + '/' + competition_name_stripped + 'Scoresheets.pdf'
+    scoresheet_file = '{}/{}Scoresheets.pdf'.format(competition_name, competition_name_stripped) 
 
     for event in event_info:
         if event['event'] != '333fm' and event['round'] == '1':
@@ -55,7 +89,6 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
             
             if event['event'] in events_ranking_by_speed:
                 result_string_sorted_events = sorted(result_string, key=lambda x:x[event_ids[event['event']]])
-
             for name in result_string_sorted_events:
                 if str(name[event_ids[event['event']]]).isdigit():
                     scoresheet_list.append(name)
@@ -67,32 +100,27 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
             sheet.add_labels((name, event_ids, event_dict, round_counter, competitor_information, competition_name, event, scrambler_signature) for name in scoresheet_list)
             
     if only_one_competitor:
-        scoresheet_file = competition_name + '/' + competition_name_stripped + 'Scoresheets' + scoresheet_competitor_name.replace(' ', '') + '.pdf' 
+        scoresheet_file = '{}/{}Scoresheets{}.pdf'.format(competition_name, competition_name_stripped, scoresheet_competitor_name.replace(' ', ''))
     sheet.save(scoresheet_file)
 
 def create_scoresheets_second_rounds(write_scoresheets_second_round, competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, event, scrambler_signature):
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets_second_round, border=False)
-    scoresheet_list = []
-    counter = 0
-    for name in competitor_information:
-        scoresheet_list.append(name)
-        counter += 1
 
-    scoresheet_list = sorted(scoresheet_list, key=lambda x: x['ranking'])
-
+    competitor_information = sorted(competitor_information, key = lambda x: x['ranking'])
+    
     # Fill empty pages with blank scoresheets
     if (advancing_competitors % 4) != 0:
-        for filling in range(0,4-counter%4):
-            scoresheet_list.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
+        for filling in range(0,(4-len(competitor_information))%4):
+            competitor_information.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
                 
     # Create scoresheets
-    sheet.add_labels((name, event_info, event_2, next_round_name, event_round_name, competition_name, event, scrambler_signature) for name in scoresheet_list)
-    scoresheet_file = competition_name + '/' + 'Scoresheets' + event_round_name + '.pdf'
+    sheet.add_labels((name, event_info, event_2, next_round_name, event_round_name, competition_name, event, scrambler_signature) for name in competitor_information)
+    scoresheet_file = '{}/Scoresheets{}.pdf'.format(competition_name, event_round_name)
     sheet.save(scoresheet_file)
     
     print('')
-    print('Scoresheets for ' + event_round_name + ' sucessfully saved in folder ' + competition_name + '.')
+    print('Scoresheets for {} sucessfully saved in folder {}.'.format(event_round_name, competition_name))
     sys.exit()
 
 def create_registration_file(output_registration, registration_list, column_ids, competition_days):
@@ -101,28 +129,28 @@ def create_registration_file(output_registration, registration_list, column_ids,
         for competitor in registration_list:
             competitor_info = ''
             for column in range(1, column_ids[min(column_ids, key=column_ids.get)]):
-                competitor_info += competitor[column] + ','
+                competitor_info = ''.join([competitor_info, competitor[column], ','])
             for day in competitor[len(competitor) - 2]:
-                competitor_info += day + '/'
+                competitor_info = ''.join([competitor_info, day, '/'])
             competitor_info = competitor_info[:-1]
-            competitor_info += ','
+            competitor_info = ''.join([competitor_info, ','])
             for events_per_day in competitor[len(competitor) - 1]:
-                competitor_info += str(events_per_day) + '+'
+                competitor_info = ''.join([str(events_per_day), '+'])
             competitor_info = competitor_info[:-1]
-            competitor_info += ','
+            competitor_info = ''.join([competitor_info, ','])
             if competitor[0].isdigit():
-                competitor_info += competitor[0] + ','
+                competitor_info = ''.join([competitor_info, competitor_info[0], ','])
             else:
-                competitor_info += '0,'
+                competitor_info = ''.join([competitor_info, '0,'])
             if not competitor[3]:
-                competitor_info += 'Newcomer (Check identification!)'
+                competitor_info = ''.join([competitor_info, 'Newcomer (Check identification!)'])
             print(competitor_info, file=registration_file)
 
 def create_scrambling_file(output_scrambling, competition_name, scramblerlist):
     with open(output_scrambling, 'w') as scrambling_file:
         header = 'Event,Group,Scrambler 1,Scrambler 2,Scrambler 3,Scrambler 4,Scrambler 5'
 
-        print('Scrambling List ' + competition_name, file = scrambling_file)
+        print('Scrambling List {}'.format(competition_name), file = scrambling_file)
 
         print(header, file = scrambling_file)
 
@@ -133,26 +161,23 @@ def create_scrambling_file(output_scrambling, competition_name, scramblerlist):
                 sorted_scramblers = sorted(scramblers, key=lambda x: x.split()[-1])
                 for scrambler_id in range(0, len(scramblers)):
                     scramblers_clean += (sorted_scramblers[scrambler_id].replace('dummy name', ''),)
-                print(scrambler[0] + ',' + str(scrambler[1]) + ',' + scramblers_clean[0] + ',' + scramblers_clean[1] + ',' + scramblers_clean[2] + ',' + scramblers_clean[3] + ',' + scramblers_clean[4], file = scrambling_file)
+                print(''.join(''.join([field, ',']) for field in [scrambler[0], str(scrambler[1]), scramblers_clean[0], scramblers_clean[1], scramblers_clean[2], scramblers_clean[3], scramblers_clean[4]])[:-1], file = scrambling_file)
                 
 def create_grouping_file(output_grouping, event_ids, event_dict, result_string):
     with open(output_grouping, 'w') as grouping_file:
-        header = ' ,Name'
+        header = ',Name'
         for event in ('333', '222', '444', '555', '666', '777', '333bf', '333fm', '333oh', '333ft', 'minx', 'pyram', 'clock', 'skewb', 'sq1', '444bf', '555bf', '333mbf'):
             if event in event_ids and event_ids[event] != 999:
-                header += ',' + event_dict[event]
+                header = ''.join([',', event_dict[event]])
 
         print(header, file = grouping_file)
-
         id = 0
         for person in result_string:
             id += 1
-            grouping_list = str(id) + ',' + person[0]
-        
+            grouping_list = '{},{}'.format(str(id), person[0])        
             for event in ('333', '222', '444', '555', '666', '777', '333bf', '333fm', '333oh', '333ft', 'minx', 'pyram', 'clock', 'skewb', 'sq1', '444bf', '555bf', '333mbf'):
                     if event in event_ids and event_ids[event] != 999:
-                        grouping_list += ',' + str(person[event_ids[event]])
-
+                        grouping_list = ',{}'.format(str(person[event_ids[event]]))
             print(grouping_list, file = grouping_file)
             
 def create_nametag_file(competitor_information, competition_name, competition_name_stripped, two_sided_nametags, create_only_nametags, result_string, event_ids, scramblerlist, grouping_file_name, event_dict, only_one_competitor, round_counter, group_list, scoresheet_competitor_name):
@@ -162,7 +187,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
     competitor_information_nametags = sorted(competitor_information, key=lambda x: ftfy.fix_text(x['name']))
     sheet = labels.Sheet(specs, write_name, border=True)
     sheet.add_labels((name, competition_name) for name in competitor_information_nametags)
-    nametag_file = competition_name + '/' + competition_name_stripped + 'Nametags.pdf'
+    nametag_file = '{}/{}Nametags.pdf'.format(competition_name, competition_name_stripped)
     sheet.save(nametag_file)
 
     if two_sided_nametags:
@@ -185,14 +210,14 @@ def create_nametag_file(competitor_information, competition_name, competition_na
                 result_string_nametags[person] = swapping_person
         sheet = labels.Sheet(specs, write_grouping, border=True)
         sheet.add_labels((name, result_string_nametags, event_ids, scramblerlist, event_dict, round_counter, group_list) for name in result_string_nametags)
-        grouping_nametag_file = competition_name + '/' + competition_name_stripped + '-nametags-grouping.pdf'
+        grouping_nametag_file = '{}/{}-nametags-grouping.pdf'.format(competition_name, competition_name_stripped)
         sheet.save(grouping_nametag_file)
 
         pdf_splitter(grouping_nametag_file, competition_name)
         pdf_splitter(nametag_file, competition_name)
 
-        paths1 = glob.glob(competition_name + '/' + competition_name_stripped + 'Nametags_*.pdf')
-        paths2 = glob.glob(competition_name + '/' + competition_name_stripped + '-nametags-grouping_*.pdf')
+        paths1 = glob.glob('{}/{}Nametags_*.pdf'.format(competition_name, competition_name_stripped))
+        paths2 = glob.glob('{}/{}-nametags-grouping_*.pdf'.format(competition_name, competition_name_stripped))
         paths = paths1 + paths2
         paths = sorted(paths, key=lambda x: x.split('_')[2])
 
@@ -206,7 +231,6 @@ def create_nametag_file(competitor_information, competition_name, competition_na
     return sheet
     
 def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name):
-    import csv
     result_string = []
     with open(grouping_file_name, 'r', encoding='utf8') as f:
         reader = csv.reader(f)
@@ -233,7 +257,7 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
             return [grouping_competitor]
         else:
             print('')
-            print("ERROR!! Competitor '" + scoresheet_competitor_name + "' not found.")
+            print("ERROR!! Competitor '{}' not found.".format(scoresheet_competitor_name))
             sys.exit()
     return result_string
 
@@ -245,15 +269,13 @@ def pdf_splitter(path, competition_name):
         pdf_writer = PdfFileWriter()
         pdf_writer.addPage(pdf.getPage(page))
  
-        output_filename = competition_name + '/{}_page_{}.pdf'.format(
-            fname, page+1)
+        output_filename = '{}/{}_page_{}.pdf'.format(competition_name, fname, page+1)
  
         with open(output_filename, 'wb') as out:
             pdf_writer.write(out)
             
 def merger(output_path, input_paths):
     pdf_merger = PdfFileMerger()
-    file_handles = []
  
     for path in input_paths:
         pdf_merger.append(path)
@@ -272,19 +294,13 @@ def write_name(label, width, height, information):
     # Measure the width of the name and (possible) competitor roles and shrink the font size until it fits.
     font_size = 30
     text_width = width - 10
-    name_width = stringWidth(name['name'], 'Arial', font_size)
-    
-    while name_width > text_width:
-        font_size *= 0.95
-        name_width = stringWidth(name['name'], 'Arial', font_size)
+    name_width, font_size = enlarge_string_size(name['name'], text_width, font_size)
     
     role_font_size = 22
     role_width = stringWidth(name['role'], 'Arial', role_font_size)
     if name['role']:
         name_height = height - 53
-        while role_width > text_width:
-            role_font_size *= 0.95
-            role_width = stringWidth(name['role'], 'Arial', role_font_size)
+        role_width, role_font_size = enlarge_string_size(name['role'], text_width, role_font_size)
     else:
         name_height = height - 70
 
@@ -307,19 +323,19 @@ def write_name(label, width, height, information):
     if name['comp_count'] != 0:
         count = name['comp_count'] + 1
         if count % 10 == 1 and count != 11:
-            competitions = str(count) + 'st Competition'
+            competitions = '{}st Competition'.format(str(count))
         elif count % 10 == 2 and count != 12:
-            competitions = str(count) + 'nd Competition'
+            competitions = '{}nd Competition'.format(str(count))
         elif count % 10 == 3 and count  != 13:
-            competitions = str(count) + 'rd Competition'
+            competitions = '{}rd Competition'.format(str(count))
         else:
-            competitions = str(count) + 'th Competition'
+            competitions = '{}th Competition'.format(str(count))
     label.add(shapes.String(width/2.0, height-130, competitions, textAnchor='middle', fontSize = 12, fontName='Arial'))
 
     # Ranking
     ranking = ''
     if name['single'] != '0.00':
-        ranking = '3x3x3: ' + str(name['single']) + ' (' + str(name['average']) + ')'
+        ranking = '3x3x3: {} ({})'.format(str(name['single']), str(name['average']))
     label.add(shapes.String(width/2.0, height-145, ranking, textAnchor='middle', fontSize=12, fontName='Arial'))
     
 def calculate_event_width(name, min, limit, result_string_nametags, event_ids, event_dict):
@@ -361,12 +377,9 @@ def write_grouping(label, width, height, information):
     
     # add competitor name and WCA Id on top
     if name[2]:
-        name_and_id += ', ' + name[2]
+        name_and_id = ''.join([name_and_id, ', ', name[2]])
     fontsize = 11
-    name_width = stringWidth(name_and_id, 'Arial', fontsize)
-    while name_width > text_width:
-        fontsize *= 0.95
-        name_width = stringWidth(name_and_id, 'Arial', fontsize)
+    name_width, fontsize = enlarge_string_size(name_and_id, text_width, fontsize)
     label.add(shapes.String(width, height, name_and_id, fontSize = fontsize, fontName='Arial'))
     
     # determine if competitor is scrambler
@@ -392,11 +405,8 @@ def write_grouping(label, width, height, information):
     else:
         max_event_width = 80
     header = 'Event '
-    header_width = stringWidth('Event ', 'Arial', 10) + stringWidth('Group', 'Arial', 10)
-    while header_width < (indent + max_event_width - stringWidth('Group', 'Arial', 10)):
-        header += ' '
-        header_width = stringWidth(header, 'Arial', 10)
-    header += 'Group'
+    header, header_width = enlarge_string_width(header, '', ' ', (indent + max_event_width - stringWidth('Group', 'Arial', 10)), 10)
+    header = ''.join([header, 'Group'])
     header_height = height
     label.add(shapes.String(width, height+15, header, fontSize = 10, fontName='Arial'))
     does_scramble = False
@@ -416,16 +426,12 @@ def write_grouping(label, width, height, information):
                     max_event_width = 80
                 header = 'Event '
                 header_width = stringWidth('Event ', 'Arial', 10) + stringWidth('Group', 'Arial', 10)
-                while header_width < (indent + max_event_width - stringWidth('Group', 'Arial', 10)):
-                    header += ' '
-                    header_width = stringWidth(header, 'Arial', 10)
-                header += 'Group'
+                header, header_width = enlarge_string_width(header, '', ' ', (indent + max_event_width - stringWidth('Group', 'Arial', 10)), 10)
+                header = ''.join([header, 'Group'])
 
                 label.add(shapes.String(width, height+15, header, fontSize = 10, fontName='Arial'))
-                
                 label.add(shapes.Line(width-4, height+23, width-4, low_height+10,trokeColor=colors.black))
                 
-            
             current_event = list(event_ids.keys())[list(event_ids.values()).index(group_event)]
             event_name = event_dict[current_event]
             label.add(shapes.String(width, height, event_name, fontSize = 8, fontName='Arial'))
@@ -450,19 +456,15 @@ def write_grouping(label, width, height, information):
                 does_scramble = True
                 for rounds in range(1,group_count+1):
                     if str(rounds) != group_number and rounds in scrambling:
-                        group_string += 's' + str(rounds) + ','
+                        group_string = 's{},'.format(str(rounds))
                     elif str(rounds) == group_number:
-                        group_string += str(group_number) + ','
+                        group_string = '{},'.format(str(group_number))
 
                 group_string = group_string[:-1]
             else:
                 group_string = str(group_number)
 
-            group_width = stringWidth(group_string, 'Arial', 8)
-            while group_width < 40:
-                group_string = ' ' + group_string
-                group_width = stringWidth(group_string, 'Arial', 8)
-
+            group_string, group_width = enlarge_string_width(group_string, ' ', '', 40, 8)
             label.add(shapes.String(width+max_event_width-18, height, group_string, fontSize = 8, fontName='Arial'))
             height -= 11
             counter += 1
@@ -494,23 +496,17 @@ def write_schedule(label, width, height, information):
     text_width = width - 10
 
     font_size = 40
-    comp_name_width = stringWidth(competition_name, 'Arial', font_size)
-    while comp_name_width > text_width:
-        font_size *= 0.95
-        comp_name_width = stringWidth(competition_name, 'Arial', font_size)
-    
+    comp_name_width, font_size = enlarge_string_size(competition_name, text_width, font_size)
     label.add(shapes.String(width/2, height-70, competition_name, textAnchor='middle', fontSize=font_size, fontName='Arial'))
     
     day_id = datetime.date(year, month, day).weekday() + schedule_day
     if day_id > 7:
         day_id -= 7
 
-    day_name = calendar.day_name[day_id] + ', ' + str(competition_day_date.day) + '. ' + calendar.month_name[month]
+    day_name = '{}, {}. {}'.format(calendar.day_name[day_id], str(competition_day_date.day), calendar.month_name[month])
     day_name_width = stringWidth(day_name, 'Arial', font_size)
     font_size = 35
-    while day_name_width > text_width:
-        font_size *= 0.95
-        comp_name_width = stringWidth(day_name, 'Arial', font_size)
+    comp_name_width, font_size = enlarge_string_size(day_name, text_width, font_size)
     label.add(shapes.String(width/2, height-120, day_name, textAnchor='middle', fontSize=font_size, fontName='Arial'))
     
     # add header of table
@@ -535,50 +531,40 @@ def write_schedule(label, width, height, information):
         # determination and validation of a lot of event specific information (start and end time, timelimit, cutoff, advancing competitors etc.)
         if event_day == competition_day:
             event_start = event['startTime'].split('T')[1][:-1]
-            event_start = event_start.split(':')[0] + ':' + event_start.split(':')[1]
+            event_start = '{}:{}'.format(event_start.split(':')[0], event_start.split(':')[1])
             event_end = event['endTime'].split('T')[1][:-1]
-            event_end = event_end.split(':')[0] + ':' + event_end.split(':')[1]
+            event_end = '{}:{}'.format(event_end.split(':')[0], event_end.split(':')[1])
             event_name = event['event_name']
 
-            limit = ''
-            format = ''
-            seconds = ''
-            minutes = ''
-            seconds_cutoff = ''
-            minutes_cutoff = ''
+            limit, round_format, seconds, minutes, seconds_cutoff, minutes_cutoff = '', '', '', '', '', ''
             for events in event_info:
-                if event['event_id'] == events['event'] and event['event_name'][-1:] == events['round']:
-                    time_limit = events['limit']
-                    minutes, seconds = divmod(time_limit, 60)
-                    minutes = str(minutes)
-                    seconds = str(seconds)
-                    if len(seconds) < 2:
-                        while len(seconds) < 2:
-                            seconds = '0' + str(seconds)
-                    limit = minutes + ':' + seconds
-                    if events['cumulative']:
-                        limit += ' cumulative'
+                if event['event_id'] == events['event'] and event['event_name'].split(' - ')[1][-1:] == events['round']:
+                    minutes, seconds = format_minutes_and_seconds(events['limit'])
+                    limit = '{}:{}'.format(minutes, seconds)
+                    if events['cumulative']:                            
+                        limit = ''.join([limit, ' cumulative'])
                     if events['cutoff_number'] != 0:
                         event_name = event_name.replace('Round', 'Combined Round')
                     
-                        format_name = 'bo' + str(events['cutoff_number'])
+                        format_name = 'bo{}'.format(str(events['cutoff_number']))
                         cutoff_limit  = events['cutoff']
                         minutes_cutoff, seconds_cutoff = divmod(cutoff_limit, 60)
                         minutes_cutoff = str(minutes_cutoff)
                         seconds_cutoff = str(seconds_cutoff) 
-                        if len(seconds_cutoff) < 2:
-                            while len(seconds_cutoff) < 2:
-                                seconds_cutoff = '0' + str(seconds_cutoff)  
-                            
-                        format = format_names[format_name] + ' (< ' + minutes_cutoff + ':' + seconds_cutoff + ') / '
+                        seconds_cutoff = enlarge_string(seconds_cutoff, '0', 2)
                         
-                    format += format_names[str(events['format'])]
+                        round_format = '{} (< {}:{}) / '.format(format_names[format_name], minutes_cutoff, seconds_cutoff)    
+                        
+                    round_format += format_names[str(events['format'])]
                     
                     if events['advancing']:
-                        format += ' (' + events['advancing'] + ' proceed)'
-            round_number = event['event_name'][-1:]
+                        round_format = '({} proceed)'.format(events['advancing'])
+            if not 'Attempt' in event['event_name']:
+                round_number = event['event_name'][-1:]
+            else:
+                round_number = event['event_name'].split(' - ')[1][-1:]
             if round_number == str(round_counter[event['event_id']]) or round_number == '3':
-                replace_string = ' Round ' + str(round_number)
+                replace_string = ' Round {}'.format(str(round_number))
                 if round_number == '3' and round_counter[event['event_id']] != 3:
                     event_name = event_name.replace(replace_string, ' Semi Final')
                 else:
@@ -590,39 +576,23 @@ def write_schedule(label, width, height, information):
             event_font_size = 12
             box_height = event_font_size + 4
             set_box_height = 0
-            if stringWidth(event_name, 'Arial', event_font_size) > 155 or stringWidth(format, 'Arial', event_font_size) > 190:
+            if stringWidth(event_name, 'Arial', event_font_size) > 155 or stringWidth(round_format, 'Arial', event_font_size) > 190:
                 double_height = True
                 
                 set_box_height = box_height
                 box_height += box_height
                 event_name_string1 = event_name
                 event_name_string2 = ''
-                format_string1 = format
+                format_string1 = round_format
                 format_string2 = ''
-                new_string = ''
                 if stringWidth(event_name, 'Arial', event_font_size) > 155:
-                    event_name_string1 = ''
-                    for substring in event_name.split():
-                        new_string = event_name_string1 + substring + ' ' 
-                        if stringWidth(new_string, 'Arial', event_font_size) < 155:
-                            event_name_string1 += substring + ' '
-                        else: 
-                            break
-                    event_name_string2 = event_name.replace(event_name_string1, '')
+                    event_name_string1, event_name_string2 = create_two_strings_out_of_one(event_name, event_font_size, 155)
                 if event_name_string1[-2:] == '- ':
                     event_name_string1 = event_name_string1[:-2]
                 if event_name_string2[:1] == '-':
                     event_name_string2 = event_name_string2[2:]
-                new_string = ''
-                if stringWidth(format, 'Arial', event_font_size) > 190:
-                    format_string1 = ''
-                    for substring in format.split():
-                        new_string = format_string1 + substring + ' ' 
-                        if stringWidth(new_string, 'Arial', event_font_size) < 155:
-                            format_string1 += substring + ' '
-                        else: 
-                            break
-                    format_string2 = format.replace(format_string1, '')
+                if stringWidth(round_format, 'Arial', event_font_size) > 190:
+                    format_string1, format_string2 = create_two_strings_out_of_one(round_format, event_font_size, 190)
             
             # actual printing of the event row
             label.add(shapes.Rect(10,height-195-set_box_height,52, box_height, fillColor=colors.white))
@@ -634,11 +604,14 @@ def write_schedule(label, width, height, information):
             if double_height:
                 label.add(shapes.String(192, height-190, event_name_string1, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
                 label.add(shapes.String(192, height-190-set_box_height, event_name_string2, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
-                label.add(shapes.String(485, height-190, format_string1, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
+                if not format_string2:
+                    label.add(shapes.String(485, height-190-set_box_height/2, format_string1, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
+                else:
+                    label.add(shapes.String(485, height-190, format_string1, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
                 label.add(shapes.String(485, height-190-set_box_height, format_string2, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
             else:
                 label.add(shapes.String(192, height-190, event_name, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
-                label.add(shapes.String(485, height-190, format, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
+                label.add(shapes.String(485, height-190, round_format, fontSize=event_font_size, textAnchor='middle', fontName='Arial'))
             label.add(shapes.String(21, height-190-set_box_height/2, event_start, fontSize=event_font_size, fontName='Arial'))
             label.add(shapes.String(71, height-190-set_box_height/2, event_end, fontSize=event_font_size, fontName='Arial'))
             label.add(shapes.String(330, height-190-set_box_height/2, limit, textAnchor='middle', fontSize=event_font_size, fontName='Arial'))
@@ -653,8 +626,7 @@ def create_schedule_file(competition_name, competition_name_stripped, full_sched
     specs_scoresheets = labels.Specification(210, 297, 1, 1, 210, 297)
     
     sheet = labels.Sheet(specs_scoresheets, write_schedule, border=False)
-    schedule_file = competition_name + '/' + competition_name.replace(' ', '') + 'Schedule.pdf'
+    schedule_file = '{}/{}Schedule.pdf'.format(competition_name, competition_name_stripped)
     
     sheet.add_labels((competition_name, competition_name_stripped, full_schedule, event_info, competition_days, competition_start_day, schedule_day, timezone_utc_offset, formats, format_names, round_counter) for schedule_day in range(competition_days))
     sheet.save(schedule_file)
-    

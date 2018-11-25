@@ -52,38 +52,51 @@ if get_registration_information:
                     if registrations['name'].split(' (')[0].strip() == ftfy.fix_text(comp['name']).split(' (')[0]:
                         information.update({'ranking': comp['ranking'], 'registration_id': comp['competitor_id']})
                         competitor_information_wca.append(information)
+                        break
             elif use_cubecomps_ids:
                 for comp in competitors_api:
                     if registrations['name'].split(' (')[0].strip() == ftfy.fix_text(comp['name']).split(' (')[0]:
                         information.update({'registration_id': comp['competitor_id']})
                         competitor_information_wca.append(information)
+                        break
             else:
                 competitor_information_wca.append(information)
             registration_id += 1
 
     ########## EVENTS ##########
     # For every event parse information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
+    minimal_scramble_set_count = 1
     for wca_events in wca_json['events']:
         for wca_rounds in wca_events['rounds']:
-            cutoff_number = 0
-            cutoff = 0
-            limit = 0
-            advancing_competitors = ''
-            cumulative = ''
+            cutoff_number, cutoff, limit = 0, 0, 0
+            advancing_competitors, advancing_competitors, cumulative = '', '', ''
+
             if wca_rounds['cutoff']:
                 if 'numberOfAttempts' in wca_rounds['cutoff']:
                     cutoff_number = wca_rounds['cutoff']['numberOfAttempts']
                 if 'attemptResult' in wca_rounds['cutoff']:
                     cutoff = int(wca_rounds['cutoff']['attemptResult'] / 100)
             if 'timeLimit' in wca_rounds:
-                limit = int(wca_rounds['timeLimit']['centiseconds'] / 100)
-                if wca_rounds['timeLimit']['cumulativeRoundIds']:
-                    for cumulative_event in wca_rounds['timeLimit']['cumulativeRoundIds']:
-                        cumulative += event_dict[cumulative_event[:-3]] + ', '
-                    cumulative = cumulative[:-2]
+                if wca_rounds['timeLimit']:
+                    limit = int(wca_rounds['timeLimit']['centiseconds'] / 100)
+                    if wca_rounds['timeLimit']['cumulativeRoundIds']:
+                        for cumulative_event in wca_rounds['timeLimit']['cumulativeRoundIds']:
+                            cumulative += event_dict[cumulative_event[:-3]] + ', '
+                        cumulative = cumulative[:-2]
+                else:
+                    limit = 3600
             if wca_rounds['advancementCondition']:
                 if wca_rounds['advancementCondition']['type'] == 'percent':
                     advancing_competitors = str(wca_rounds['advancementCondition']['level']) + '%'
+                elif wca_rounds['advancementCondition']['type'] == 'attemptResult':
+                
+                    minutes, seconds = divmod(wca_rounds['advancementCondition']['level'] / 100, 60)
+                    minutes = str(int(minutes))
+                    seconds = str(int(seconds))
+                    if len(seconds) < 2:
+                        while len(seconds) < 2:
+                            seconds = '0' + str(seconds)
+                    advancing_competitors = '<' + minutes + ':' + seconds
                 else:
                     advancing_competitors = str(wca_rounds['advancementCondition']['level'])
             
@@ -91,7 +104,10 @@ if get_registration_information:
             event_info.append(wca_event_infos)
             event_ids_wca = event_ids_wca + (wca_events['id'],)
             
-            group_list.append((wca_events['id'], event_dict[wca_events['id']] + wca_rounds['id'][-3:].replace('-r', ' - Round '), wca_rounds['scrambleGroupCount'], advancing_competitors))
+            group_list.append((wca_events['id'], event_dict[wca_events['id']] + wca_rounds['id'][-3:].replace('-r', ' - Round '), wca_rounds['scrambleSetCount'], advancing_competitors))
+            
+            if wca_rounds['scrambleSetCount'] > minimal_scramble_set_count:
+                minimal_scramble_set_count = wca_rounds['scrambleSetCount'] 
 
     ########## SCHEDULE ##########
     # get schedule information from wca website
@@ -179,6 +195,15 @@ if get_registration_information:
         print('An error occured while importing the rounds and groups information from the WCIF file, script aborted.')
         print('Please make sure to enter all necessary information in the "Manage events" tab on the WCA competition page.')
         sys.exit()
+    if minimal_scramble_set_count == 1:
+        continue_script = get_information('It looks like all your events only have one set of scrambles. Do you still want to continue running this script? (y/n)')
+        if not continue_script:
+            print('')
+            print('Please edit the group information in the competition event tab  before running this script again.')
+            print('Script aborted.')
+            sys.exit()
+        else:
+            print('Continue script. Please be reminded, that there is a high possibility of not finding any scramblers!')
 
     ### Get data from csv-export
     # same as for the WCA registration, get competitor information from registration file (if used): name, WCA ID, date of birth, gender, country and events registered for

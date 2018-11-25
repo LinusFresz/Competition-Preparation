@@ -8,14 +8,14 @@ from pdf_file_generation import *
 from db import WCA_Database
 
 ### Error handling for WCA website login errors
-def error_handling_wcif(competition_name, store_file, competition_page):
+def error_handling_wcif(competition_name, competition_page):
     if 'Not logged in' in competition_page:
         print('ERROR!!')
         print('While logging into WCA website, either WCA ID or password was wrong. Aborted script, please retry.')
         sys.exit()
     elif 'Competition with id' in competition_page:
         print('ERROR!!')
-        print('Competition with name ' + competition_name + ' not found on WCA website.')
+        print('Competition with name {} not found on WCA website.'.format(competition_name))
         sys.exit()
     elif 'Not authorized to manage' in competition_page:
         print('ERROR!!')
@@ -48,12 +48,12 @@ def wca_registration_system():
 
 def get_file_name(id):
     while True:
-        file_name = input('Enter ' + id + '-file name: ')
+        file_name = input('Enter {}-file name: '.format(id))
         file_name = file_name.replace('.csv', '').replace('.txt', '')
-        file_name_csv = file_name + '.csv'
-        file_name_txt = file_name + '.txt'
+        file_name_csv = '{}.csv'.format(file_name)
+        file_name_txt = '{}.txt'.format(file_name)
         if not os.path.isfile(file_name_csv) and not os.path.isfile(file_name_txt):
-            print('File ' + file_name_txt + ' or ' + file_name_csv + ' not found. Please enter valid file name.')
+            print('File {} or {} not found. Please enter valid file name.'.format(file_name_txt, file_name_csv))
         else:
             break
     if os.path.isfile(file_name_txt):
@@ -68,19 +68,7 @@ def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags
             grouping_file_name = get_file_name('grouping')
     
     if not wca_info:
-        while True:
-            file_name = input('Enter registration-file name: ')
-            file_name = file_name.replace('.csv', '').replace('.txt', '')
-            file_name_csv = file_name + '.csv'
-            file_name_txt = file_name + '.txt'
-            if not os.path.isfile(file_name_csv) and not os.path.isfile(file_name_txt):
-                print('File ' + file_name_txt + ' or ' + file_name_csv + ' not found. Please enter valid file name.')
-            else:
-                break
-        if os.path.isfile(file_name_txt):
-            file_name = file_name_txt
-        else:
-            file_name = file_name_csv
+        file_name = get_file_name('registration')
         if only_scoresheets or (not new_creation and two_sided_nametags):
             grouping_file_name = get_file_name('grouping')
     return (file_name, grouping_file_name)
@@ -101,15 +89,13 @@ def wca_registration(new_creation):
         competition_name = input('Competition name: ')
         create_competition_folder(competition_name)
         competition_name_stripped = competition_name.replace(' ', '')
-        wcif_file = competition_name + '/' + competition_name_stripped + '-grouping.txt'
-        return (wca_password, wca_mail, competition_name, competition_name_stripped, wcif_file)
+        return (wca_password, wca_mail, competition_name, competition_name_stripped)
     return (wca_password, wca_mail)
 
-def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped, file):
+def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped):
     print('Fetching information from WCA competition website...')
     url1 = 'https://www.worldcubeassociation.org/oauth/token'
     url2 = 'https://www.worldcubeassociation.org/api/v0/competitions/' + competition_name_stripped + '/wcif'
-    wcif_file = competition_name + '/wcif_information.txt'
     
     wca_headers = {'grant_type':'password', 'username':wca_mail, 'password':wca_password, 'scope':'public manage_competitions'}
     wca_request_token = requests.post(url1, data=wca_headers)
@@ -120,9 +106,9 @@ def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stri
     competition_wcif_info = requests.get(url2, headers=wca_headers2)
 
     # error handling for wrong WCA website information and file-save if successful information fetch
-    error_handling_wcif(competition_name, wcif_file, competition_wcif_info.text)
+    error_handling_wcif(competition_name, competition_wcif_info.text)
     
-    return (wcif_file, competition_wcif_info.text)
+    return competition_wcif_info.text
     
 def get_information(which_information):
     print(which_information)

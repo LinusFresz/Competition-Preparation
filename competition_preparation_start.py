@@ -72,7 +72,7 @@ while True:
 if new_creation or create_only_nametags:
     bool = True
     wca_info = wca_registration_system()
-    wca_password, wca_mail, competition_name, competition_name_stripped, wcif_file = wca_registration(bool)
+    wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(bool)
     if not create_only_registration_file:
         two_sided_nametags = get_information('Create two-sided nametags? (grouping (and scrambling) information on the back) (y/n)')
         if two_sided_nametags:
@@ -89,7 +89,7 @@ if new_creation or create_only_nametags:
                 print('ERROR! Not a valid cubecomps link, script continues without cubecomps.com information.')
                 
             comp_id = cubecomps_id.split('?')[1].split('&')[0].split('=')[1]
-            cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/' + comp_id
+            cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}'.format(comp_id)
             cubecomps_api = requests.get(cubecomps_api_url).json()
             
             if cubecomps_api['name'] != competition_name:
@@ -119,12 +119,11 @@ if new_creation or create_only_nametags:
             scrambling_file_name = get_file_name('scrambling')
 
     file_name, grouping_file_name = competition_information_fetch(wca_info, False, create_only_nametags, new_creation)
-    
-    store_file = competition_name + '/' + competition_name_stripped + '-grouping.txt'
+
     if create_only_nametags and not two_sided_nametags and not wca_info:
         True
     else:
-        wcif_file, competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped, store_file)
+        competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
     
     print('Saved results, extracting data now.')  
     
@@ -137,12 +136,12 @@ elif blank_sheets:
 # select grouping file if only nametags should be generated
 elif reading_grouping_from_file:
     wca_info = wca_registration_system()
-    wca_password, wca_mail, competition_name, competition_name_stripped, wcif_file = wca_registration(bool)
+    wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(bool)
     scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
     if only_one_competitor:
         scoresheet_competitor_name = input('Competitor Name: ')
     file_name, grouping_file_name = competition_information_fetch(wca_info, True, False, new_creation)
-    wcif_file, competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped, '')
+    competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
 # create schedule from wca website information
 elif create_only_schedule:
@@ -151,13 +150,12 @@ elif create_only_schedule:
     if not wca_info:
         print('ERROR!! Schedule can only be generated from WCA website data. Script aborted.')
         sys.exit()
-    wca_password, wca_mail, competition_name, competition_name_stripped, wcif_file = wca_registration(bool)
+    wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(bool)
     two_sided_nametags = False
     
     file_name, grouping_file_name = competition_information_fetch(wca_info, False, two_sided_nametags, new_creation)
     
-    store_file = competition_name + '/' + competition_name_stripped + '-grouping.txt'
-    wcif_file, competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped, store_file)
+    competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
     
 # create scoresheets for seconds rounds by using cubecomps.com information
 elif create_scoresheets_second_rounds_bool:
@@ -175,7 +173,7 @@ elif create_scoresheets_second_rounds_bool:
     comp_id = cubecomps_id.split('//')[1].split('?')[1].split('&')[0].split('=')[1]
     event_id = cubecomps_id.split('//')[1].split('?')[1].split('&')[1].split('=')[1]
     round_id = cubecomps_id.split('//')[1].split('?')[1].split('&')[2].split('=')[1]
-    cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/' + comp_id + '/events/' + event_id + '/rounds/' + round_id
+    cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}/events/{}/rounds/{}'.format(comp_id, event_id, round_id)
     cubecomps_api = requests.get(cubecomps_api_url).json()
     competition_name = cubecomps_api['competition_name']
     create_competition_folder(competition_name)
@@ -184,7 +182,7 @@ elif create_scoresheets_second_rounds_bool:
     counter, competitor, advancing_competitors_next_round = 0, 0, 0
     competitors = []
 
-    event_round_name = cubecomps_api['event_name'] + ' - ' + cubecomps_api['round_name']
+    event_round_name = '{} - {}'.format(cubecomps_api['event_name'], cubecomps_api['round_name']) 
     
     for competitor in cubecomps_api['results']:
         if competitor['top_position']:
@@ -210,4 +208,4 @@ elif create_scoresheets_second_rounds_bool:
     scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
     file_name, grouping_file_name = competition_information_fetch(wca_info, False, False, new_creation)
 
-    wcif_file, competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped, '')
+    competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)

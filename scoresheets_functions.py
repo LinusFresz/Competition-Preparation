@@ -3,6 +3,15 @@
 '''
 
 from wca_registration import *
+    
+def format_limit_string(cumulative, minutes, seconds):
+    if cumulative:
+        if ',' in cumulative:
+            return 'Result ({}:{} cumulative limit for {} and {})'.format(minutes, seconds, cumulative.split(',')[0], cumulative.split(',')[1])
+        else:
+            return 'Result (Time Limit {}:{} cumulative)'.format(minutes, seconds)
+    else:
+        return 'Result (Time Limit {}:{})'.format(minutes, seconds)
 
 def scoresheet_results_header(label, limit, limit_width, font_size_limit, height, scrambler_signature):
     ### Depending on the length of the 'limit' string (which includes (cumulative) limits), the box height gets choosen
@@ -30,43 +39,19 @@ def scoresheet_results_header(label, limit, limit_width, font_size_limit, height
     
     time_limit_width = stringWidth(limit, 'Arial', font_size_limit)
     time_limit_string1 = limit
-    time_limit_string2 = ''
-    time_limit_string3 = ''
+    time_limit_string2, time_limit_string3 = '', ''
     if time_limit_width > (120 + extra_width) and time_limit_width <= (240 + 2*extra_width):
-        time_limit_string1 = ''
-        for substring in limit.split():
-            new_string = time_limit_string1 + substring + ' ' 
-            if stringWidth(new_string, 'Arial', font_size_limit) < (120 + extra_width):
-                time_limit_string1 += substring + ' '
-            else: 
-                break
-        time_limit_string2 = limit.replace(time_limit_string1, '')
-        
+        time_limit_string1, time_limit_string2 = create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
+
         label.add(shapes.Rect(80-shift,height-120,125+shift, 30, fillColor=colors.white))
         label.add(shapes.String(84-shift,height-100,time_limit_string1, fontSize=font_size_limit, fontName='Arial'))
         label.add(shapes.String(84-shift,height-115,time_limit_string2, fontSize=font_size_limit, fontName='Arial'))
         height = height - 15
     elif time_limit_width > (240 + extra_width):
-        time_limit_string1 = ''
-        for substring in limit.split():
-            new_string = time_limit_string1 + substring + ' ' 
-            if stringWidth(new_string, 'Arial', font_size_limit) < (120 + extra_width):
-                time_limit_string1 += substring + ' '
-            else: 
-                break
-        time_limit_string2 = limit.replace(time_limit_string1, '')
-        
-        new_string = ''
+        time_limit_string1, time_limit_string2 = create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
         limit = time_limit_string2.replace('  ', ' ')
-        time_limit_string2 = ''
-        for substring in limit.split():
-            new_string = time_limit_string2 + substring + ' ' 
-            if stringWidth(new_string, 'Arial', font_size_limit) < (120 + extra_width):
-                time_limit_string2 += substring + ' '
-            else: 
-                break
-        time_limit_string3 = limit.replace(time_limit_string2, '')
-    
+        time_limit_string2, time_limit_string3 = create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
+
         label.add(shapes.Rect(80-shift,height-135,125+shift, 45, fillColor=colors.white))
         label.add(shapes.String(84-shift,height-100,time_limit_string1, fontSize=font_size_limit, fontName='Arial'))
         label.add(shapes.String(84-shift,height-115,time_limit_string2, fontSize=font_size_limit, fontName='Arial'))
@@ -108,10 +93,10 @@ def scoresheet_result_boxes(label, height, width, format, event, cutoff_number, 
         # add cutoff information (if there is any)
         if cutoff_number == str(number) and name[0] != 'name':
             if cutoff_number == '1': 
-                cutoff = 'Continue if Attempt 1 is below ' + cutoff_time
+                cutoff = 'Continue if Attempt 1 is below {}'.format(cutoff_time)
                 indent = 70
             else:
-                cutoff = 'Continue if Attempt 1 or Attempt 2 is below ' + cutoff_time
+                cutoff = 'Continue if Attempt 1 or Attempt 2 is below {}'.format(cutoff_time)
                 indent = 93
             label.add(shapes.Line(10,height-13,width/2.0-indent,height-13,trokeColor=colors.black,strokeWidth=1,strokeDashArray=[2,2])) 
             label.add(shapes.Line(width/2+indent,height-13,width-10,height-13,trokeColor=colors.black,strokeWidth=1,strokeDashArray=[2,2])) 
@@ -138,18 +123,15 @@ def scoresheet_extra(label, height, width, scrambler_signature):
 def scoresheet_blank_header(label, height, width, competition_name, blank_sheets_round_name):
     text_width = width - 10
     font_size = 25
-    comp_name_width = stringWidth(competition_name, 'Arial', font_size)
-    while comp_name_width > text_width:
-        font_size *= 0.95
-        comp_name_width = stringWidth(competition_name, 'Arial', font_size)
+    comp_name_width, font_size = enlarge_string_size(competition_name, text_width, font_size)
+
     label.add(shapes.String(width/2, height-25, competition_name, textAnchor='middle', fontSize=font_size, fontName='Arial'))
     
     if blank_sheets_round_name:
         font_size_round = 25
         event_width = text_width + 1
-        while event_width > text_width:
-            font_size_round *= 0.95
-            event_width = stringWidth(blank_sheets_round_name, 'Arial', font_size_round)
+        event_width, font_size_round = enlarge_string_size(blank_sheets_round_name, text_width, font_size_round)
+
         s = shapes.String(width/2.0, height-55, blank_sheets_round_name, textAnchor='middle', fontName='Arial')
         s.fontSize = font_size_round
         label.add(s)
@@ -182,7 +164,7 @@ def write_scoresheets_second_round(label, width, height, information):
     if name['name'] and not name['personId']:
         id = 'New Competitor'
     else:
-        id = '     ' + name['personId']
+        id = '     {}'.format(name['personId'])
     label.add(shapes.String(width-78, height-16, id, fontSize=10, fontName='Arial'))
     
     # selection of event information and shrinking to fit on scoresheets
@@ -202,25 +184,11 @@ def write_scoresheets_second_round(label, width, height, information):
     event_name = event_round_name
        
     event_width = stringWidth(event_name, 'Arial', fontSize=25)
-    minutes, seconds = divmod(limit, 60)
-    minutes = str(minutes)
-    seconds = str(seconds)
-    if len(seconds) < 2:
-        while len(seconds) < 2:
-            seconds = '0' + str(seconds)
-    if cumulative:
-        if ',' in cumulative:
-            events = cumulative.split(',')
-            limit = 'Result (' + minutes + ':' + seconds + ' cumulative limit for ' + events[0] + ' and ' + events[1] + ')'
-        else:
-            limit = 'Result (Time Limit ' + minutes + ':' + seconds + ' cumulative)'
-    else:
-        limit = 'Result (Time Limit ' + minutes + ':' + seconds + ')'
-
+    minutes, seconds = format_minutes_and_seconds(limit)
+    limit = format_limit_string(cumulative, minutes, seconds)
+    
     font_size_event = 25
-    while event_width > text_width:
-        font_size_event *= 0.95
-        event_width = stringWidth(event_name, 'Arial', font_size_event)
+    event_width, font_size_event = enlarge_string_size(event_name, text_width, font_size_event)
 
     if not name['name']:
         event_name, group, round = '', '', ''
@@ -228,22 +196,15 @@ def write_scoresheets_second_round(label, width, height, information):
 
     cutoff_time = ''
     if cutoff != 0:
-        minutes, seconds = divmod(cutoff, 60)
-        minutes = str(minutes)
-        seconds = str(seconds)
-        if len(seconds) < 2:
-            while len(seconds) < 2:
-                seconds = '0' + str(seconds)
-        cutoff_time = minutes + ':' + seconds
+        minutes, seconds = format_minutes_and_seconds(limit)
+        cutoff_time = '{}:{}'.format(minutes, seconds) 
 
     s = shapes.String(width/2.0, height-50, event_name, textAnchor='middle', fontName='Arial')
     s.fontSize = font_size_event
     label.add(s)
 
     # competitor information: name, WCA ID and registration id 
-    comp_name = ''
-    registration_id = ''
-    ranking = ''
+    comp_name, registration_id, ranking = '', '', ''
 
     if name['name']:
         comp_name = name['name']
@@ -251,17 +212,13 @@ def write_scoresheets_second_round(label, width, height, information):
         ranking = str(name['ranking'])
         
     font_size = 13
-    name_width = stringWidth(comp_name, 'Arial', font_size)    
-    while name_width > 140:
-        font_size *= 0.95
-        name_width = stringWidth(comp_name, 'Arial', font_size)
-    
+    name_width, font_size = enlarge_string_size(comp_name, 140, font_size)
+
     r = shapes.String(45,height-80, comp_name, fontName='Arial')
     r.fontSize = font_size
     label.add(r)
 
-    while len(ranking) < 3:
-        ranking = ' ' + ranking
+    ranking = enlarge_string(ranking, ' ', 3)
     label.add(shapes.String(width-22, height-80, ranking, fontSize=12, fontName='Arial'))
 
     if not comp_name:
@@ -270,8 +227,7 @@ def write_scoresheets_second_round(label, width, height, information):
         label.add(shapes.String(10, height-16, competition_name, fontSize=10, fontName='Arial'))
 
     if registration_id:
-        while len(registration_id) < 3:
-            registration_id = ' ' + registration_id
+        registration_id = enlarge_string(registration_id, ' ', 3)
         label.add(shapes.Rect(10,height-83,22, 15, fillColor=colors.white))
         label.add(shapes.String(14, height-79, registration_id, fontSize=10, fontName='Arial'))
 
@@ -316,56 +272,36 @@ def write_scoresheets(label, width, height, information):
     font_size_event = 25
     font_size_limit = 8
     if name[event_ids[event['event']]]:
-        event_name = event_dict[event['event']] + ' - Round ' + str(event['round'])
+        event_name = '{} - Round {}'.format(event_dict[event['event']], str(event['round']))
         if round_counter[event['event']] == 1:
             if event['cutoff_number'] == 0:
                 event_name = event_name.replace(' Round 1', ' Final')
             else:
                 event_name = event_name.replace(' Round 1', ' Combined Final')
         event_width = stringWidth(event_name, 'Arial', fontSize=25)
-        group = 'Group ' + str(name[event_ids[event['event']]])
-        minutes, seconds = divmod(event['limit'], 60)
-        minutes = str(minutes)
-        seconds = str(seconds)
-        if len(seconds) < 2:
-            while len(seconds) < 2:
-                seconds = '0' + str(seconds)
-        if event['cumulative']:
-            if ',' in event['cumulative']:
-                events = event['cumulative'].split(',')
-                limit = 'Result (' + minutes + ':' + seconds + ' cumulative limit for ' + events[0] + ' and ' + events[1] + ')'
-            else:
-                limit = 'Result (Time Limit ' + minutes + ':' + seconds + ' cumulative)'
-        else:
-            limit = 'Result (Time Limit ' + minutes + ':' + seconds + ')'
-
+        group = 'Group {}'.format(str(name[event_ids[event['event']]]))
+        minutes, seconds = format_minutes_and_seconds(event['limit'])
+        limit = format_limit_string(event['cumulative'], minutes, seconds)
+        
         font_size_event = 25
-        while event_width > text_width:
-            font_size_event *= 0.95
-            event_width = stringWidth(event_name, 'Arial', font_size_event)
-
+        event_width, font_size_event = enlarge_string_size(event_name, text_width, font_size_event)
+        
     else:   
         event_name, group, round = '', '', ''
         limit = 'Result'
 
     cutoff_time = ''
     if event['cutoff'] != 0:
-        minutes, seconds = divmod(event['cutoff'], 60)
-        minutes = str(minutes)
-        seconds = str(seconds)
-        if len(seconds) < 2:
-            while len(seconds) < 2:
-                seconds = '0' + str(seconds)
-        cutoff_time = minutes + ':' + seconds
+        minutes, seconds = format_minutes_and_seconds(event['cutoff'])
+        cutoff_time = '{}:{}'.format(minutes, seconds)
 
     s = shapes.String(width/2.0, height-50, event_name, textAnchor='middle', fontName='Arial')
     s.fontSize = font_size_event
     label.add(s)
 
     # competitor information: name, WCA ID and registration id 
-    comp_name = ''
-    registration_id = ''
-    id = ''
+    comp_name, registration_id, id = '', '', ''
+
     for person in competitor_information:
         if (name[2] and ftfy.fix_text(name[2]) == ftfy.fix_text(person['personId'])) or (ftfy.fix_text(name[0]) == ftfy.fix_text(person['name'])):
             comp_name = person['name']
@@ -374,12 +310,9 @@ def write_scoresheets(label, width, height, information):
             if id == '':
                 id = 'New Competitor'
             else:
-                id = '     ' + id
+                id = '     {}'.format(id)
     font_size = 13
-    name_width = stringWidth(comp_name, 'Arial', font_size)    
-    while name_width > 140:
-        font_size *= 0.95
-        name_width = stringWidth(comp_name, 'Arial', font_size)
+    name_width, font_size = enlarge_string_size(comp_name, 140, font_size)
     
     r = shapes.String(45,height-80, comp_name, fontName='Arial')
     r.fontSize = font_size
@@ -392,8 +325,7 @@ def write_scoresheets(label, width, height, information):
         label.add(shapes.String(10, height-16, competition_name, fontSize=10, fontName='Arial'))
 
     if registration_id:
-        while len(registration_id) < 3:
-            registration_id = ' ' + registration_id
+        registration_id = enlarge_string(registration_id, ' ', 3)
         label.add(shapes.Rect(10,height-83,22, 15, fillColor=colors.white))
         label.add(shapes.String(14, height-79, registration_id, fontSize=10, fontName='Arial'))
     label.add(shapes.String(width-50, height-80, group, fontSize=12, fontName='Arial'))
