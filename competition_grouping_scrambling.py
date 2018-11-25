@@ -410,7 +410,7 @@ if new_creation:
             for event_scrambler in scramblerlist:
                 if schedule_event['event_name'] == event_scrambler[0]:
                     round_name = event_scrambler[0]
-                    replace_string = ' Round '.format(event_scrambler[0][-1:])
+                    replace_string = ' Round {}'.format(event_scrambler[0][-1:])
                     if event_scrambler[0][-1:] == '3' and round_counter[schedule_event['event_id']] != 3:
                         round_name = round_name.replace(replace_string, ' Semi Final')
                     elif event_scrambler[0][-1:] == str(round_counter[schedule_event['event_id']]):

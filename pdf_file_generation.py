@@ -132,14 +132,12 @@ def create_registration_file(output_registration, registration_list, column_ids,
                 competitor_info = ''.join([competitor_info, competitor[column], ','])
             for day in competitor[len(competitor) - 2]:
                 competitor_info = ''.join([competitor_info, day, '/'])
-            competitor_info = competitor_info[:-1]
-            competitor_info = ''.join([competitor_info, ','])
+            competitor_info = ''.join([competitor_info[:-1], ','])
             for events_per_day in competitor[len(competitor) - 1]:
-                competitor_info = ''.join([str(events_per_day), '+'])
-            competitor_info = competitor_info[:-1]
-            competitor_info = ''.join([competitor_info, ','])
+                competitor_info = ''.join([competitor_info, str(events_per_day), '+'])
+            competitor_info = ''.join([competitor_info[:-1], ','])
             if competitor[0].isdigit():
-                competitor_info = ''.join([competitor_info, competitor_info[0], ','])
+                competitor_info = ''.join([competitor_info, competitor[0], ','])
             else:
                 competitor_info = ''.join([competitor_info, '0,'])
             if not competitor[3]:
@@ -168,7 +166,7 @@ def create_grouping_file(output_grouping, event_ids, event_dict, result_string):
         header = ',Name'
         for event in ('333', '222', '444', '555', '666', '777', '333bf', '333fm', '333oh', '333ft', 'minx', 'pyram', 'clock', 'skewb', 'sq1', '444bf', '555bf', '333mbf'):
             if event in event_ids and event_ids[event] != 999:
-                header = ''.join([',', event_dict[event]])
+                header = '{},{}'.format(header, event_dict[event])
 
         print(header, file = grouping_file)
         id = 0
@@ -177,7 +175,7 @@ def create_grouping_file(output_grouping, event_ids, event_dict, result_string):
             grouping_list = '{},{}'.format(str(id), person[0])        
             for event in ('333', '222', '444', '555', '666', '777', '333bf', '333fm', '333oh', '333ft', 'minx', 'pyram', 'clock', 'skewb', 'sq1', '444bf', '555bf', '333mbf'):
                     if event in event_ids and event_ids[event] != 999:
-                        grouping_list = ',{}'.format(str(person[event_ids[event]]))
+                        grouping_list = '{},{}'.format(grouping_list, str(person[event_ids[event]]))
             print(grouping_list, file = grouping_file)
             
 def create_nametag_file(competitor_information, competition_name, competition_name_stripped, two_sided_nametags, create_only_nametags, result_string, event_ids, scramblerlist, grouping_file_name, event_dict, only_one_competitor, round_counter, group_list, scoresheet_competitor_name):
