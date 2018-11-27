@@ -2,9 +2,7 @@
 Multiple functions to log in on the WCA website and catch all necessary competition and competitor registration information
 '''
 
-
 from pdf_file_generation import *
-#from chromedriver_data import *
 from db import WCA_Database
 
 ### Error handling for WCA website login errors
@@ -64,12 +62,12 @@ def get_file_name(id):
 def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags, new_creation):
     file_name, grouping_file_name = '', ''
     if wca_info:
-        if (two_sided_nametags and not new_creation) or only_scoresheets:
+        if two_sided_nametags or only_scoresheets:
             grouping_file_name = get_file_name('grouping')
     
     if not wca_info:
         file_name = get_file_name('registration')
-        if only_scoresheets or (not new_creation and two_sided_nametags):
+        if only_scoresheets or two_sided_nametags:
             grouping_file_name = get_file_name('grouping')
     return (file_name, grouping_file_name)
 
@@ -100,7 +98,6 @@ def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stri
     wca_headers = {'grant_type':'password', 'username':wca_mail, 'password':wca_password, 'scope':'public manage_competitions'}
     wca_request_token = requests.post(url1, data=wca_headers)
     wca_access_token = json.loads(wca_request_token.text)['access_token']
-
     wca_authorization = 'Bearer ' + wca_access_token
     wca_headers2 = {'Authorization': wca_authorization}
     competition_wcif_info = requests.get(url2, headers=wca_headers2)
@@ -128,3 +125,52 @@ def get_information(which_information):
 def create_competition_folder(competition_name):
     if not os.path.exists(competition_name):
         os.makedirs(competition_name)
+
+def get_competitor_information_from_cubecomps(cubecomps_id, competition_name):
+    competitors_api = []
+    try:
+        cubecomps_id.split('?')[1].split('&')[0].split('=')[1]
+    except IndexError:
+        print('ERROR! Not a valid cubecomps link, script continues without cubecomps.com information.')
+        return ([], False)
+
+    comp_id = cubecomps_id.split('?')[1].split('&')[0].split('=')[1]
+    cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}'.format(comp_id)
+    cubecomps_api = requests.get(cubecomps_api_url).json()
+            
+    if cubecomps_api['name'] != competition_name:
+        print('Cubecomps link does not match given competition name. Script uses fallback to registration ids from WCA website!')
+        use_cubecomps_ids = False
+    else:
+        for competitor in cubecomps_api['competitors']:
+            competitors_api.append({'name': competitor['name'], 'competitor_id': int(competitor['id'])})
+        use_cubecomps_ids = True
+    return (competitors_api, use_cubecomps_ids)
+
+def get_round_information_from_cubecomps(cubecomps_id):
+    advancing_competitors_next_round = 0
+    competitors_api = []
+    try:
+        cubecomps_id.split('?')[1].split('&')[2].split('=')[1]
+    except IndexError:
+        print('ERROR! Not a valid cubecomps link, script aborted.')
+        sys.exit()
+    
+    print('Get round information from cubecomps.com...')
+    print('')
+
+    comp_id = cubecomps_id.split('?')[1].split('&')[0].split('=')[1]
+    event_id = cubecomps_id.split('?')[1].split('&')[1].split('=')[1]
+    round_id = cubecomps_id.split('?')[1].split('&')[2].split('=')[1]
+    cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}/events/{}/rounds/{}'.format(comp_id, event_id, round_id)
+    cubecomps_api = requests.get(cubecomps_api_url).json()
+    competition_name = cubecomps_api['competition_name']
+    competition_name_stripped = competition_name.replace(' ', '')
+    create_competition_folder(competition_name)
+    event_round_name = '{} - {}'.format(cubecomps_api['event_name'], cubecomps_api['round_name']) 
+    
+    for competitor in cubecomps_api['results']:
+        if competitor['top_position']:
+            advancing_competitors_next_round += 1
+            competitors_api.append({'name': competitor['name'], 'competitor_id': int(competitor['competitor_id']), 'ranking': int(competitor['position'])})
+    return(cubecomps_api, competitors_api, event_round_name, advancing_competitors_next_round, competition_name, competition_name_stripped)

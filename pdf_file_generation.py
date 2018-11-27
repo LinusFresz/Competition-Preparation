@@ -12,8 +12,23 @@
     additional functions for scoresheets can be found in scoresheets_functions.py
 '''
 
-import os, sys, getpass, ftfy, random, labels, glob, datetime, calendar, pytz, requests, json, csv
-from collections import Counter
+import os
+import sys
+import getpass
+import random
+import glob
+import calendar
+import json
+import csv
+import collections
+
+import ftfy
+import requests
+import labels
+import pytz
+import datetime
+
+#from collections import Counter
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import registerFont, stringWidth
@@ -178,7 +193,7 @@ def create_grouping_file(output_grouping, event_ids, event_dict, result_string):
                         grouping_list = '{},{}'.format(grouping_list, str(person[event_ids[event]]))
             print(grouping_list, file = grouping_file)
             
-def create_nametag_file(competitor_information, competition_name, competition_name_stripped, two_sided_nametags, create_only_nametags, result_string, event_ids, scramblerlist, grouping_file_name, event_dict, only_one_competitor, round_counter, group_list, scoresheet_competitor_name):
+def create_nametag_file(competitor_information, competition_name, competition_name_stripped, two_sided_nametags, create_only_nametags, result_string, event_ids, scramblerlist, event_dict, only_one_competitor, round_counter, group_list, scoresheet_competitor_name):
     # format information for nametags: usual DIN-A4 layout with 2 rows of 4 nametags each with a size of 85x55mm
     specs = labels.Specification(210, 297, 2, 4, 85, 55)
     

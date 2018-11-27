@@ -12,9 +12,120 @@ event_id, round_id, competitor_role, guests, cumulative, advancing_competitiors,
 event_counter, event_counter_wca, group_count, cutoff_number, cutoff, round_counter, competition_days = (0 for i in range(7))
 registration_id = 1
 
-column_ids = {'333': 999, '222': 999, '444': 999, '555': 999, '666': 999, '777': 999, '333bf': 999, '333fm': 999, '333oh': 999, '333ft': 999, 'minx': 999, 'pyram': 999, 'clock': 999, 'skewb': 999, 'sq1': 999, '444bf': 999, '555bf': 999, '333mbf': 999}
-formats = {'a': 'ao5', 'm': 'mo3', '1': 'bo1', '2': 'bo2', '3': 'bo3'}
-format_names = {'bo3': 'Best of 3', 'bo2': 'Best of 2', 'bo1': 'Best of 1', 'mo3': 'Mean of 3', 'ao5': 'Average of 5'}
+column_ids = {
+        '333': 999, '222': 999, '444': 999, '555': 999, '666': 999, 
+        '777': 999, '333bf': 999, '333fm': 999, '333oh': 999, '333ft': 999, 
+        'minx': 999, 'pyram': 999, 'clock': 999, 'skewb': 999, 'sq1': 999, 
+        '444bf': 999, '555bf': 999, '333mbf': 999
+        }
+formats = {
+        'a': 'ao5', 'm': 'mo3', '1': 'bo1', 
+        '2': 'bo2', '3': 'bo3'
+        }
+format_names = {
+        'bo3': 'Best of 3', 'bo2': 'Best of 2', 'bo1': 
+        'Best of 1', 'mo3': 'Mean of 3', 'ao5': 'Average of 5'
+        }
+
+def get_registration_from_file(file_name, new_creation, reading_grouping_from_file, use_csv_registration_file, column_ids, event_counter, competitor_information_wca, competitors):
+    file = open(file_name)
+    all_data = []
+    wca_ids, event_list = (), ()
+    line_count = 0
+    registration_id = 1
+    for row in file:
+            row_list = row.split(',')
+            row_list[1] = row_list[1].split(' (')[0]
+            last_entry = len(row_list) - 1
+            row_list[last_entry] = row_list[last_entry].replace('\n', '')
+            if line_count == 0:
+                if (new_creation and not row.startswith('Status')) or (reading_grouping_from_file and not 'Name' in row):
+                    print('')
+                    print('ERROR!! Missing header-line in registration file, script aborted.')
+                    sys.exit()
+                counter = 0
+                for event in row_list:
+                    if event in column_ids:
+                        new_id = {event: counter}
+                        column_ids.update(new_id)
+                        event_list += (event,)
+                        event_counter += 1
+                    counter += 1
+    
+            else:
+                all_data.append(row_list)
+                role = ''
+                if use_csv_registration_file:
+                    if row_list[3]:
+                        for person in competitor_information_wca:
+                            if row_list[3] == person['personId']:
+                                if person['role']:
+                                    role = person['role']
+                    if new_creation or reading_grouping_from_file:
+                        competitor_information.append(
+                                    {
+                                    'name': row_list[1],
+                                    'country': row_list[2],
+                                    'role': role,
+                                    'personId': row_list[3],
+                                    'registration_id': registration_id
+                                    }
+                                )
+                    else:
+                        for comp in competitors:
+                            if row_list[1] == comp['name'].split(' (')[0]:
+                                competitor_information.append(
+                                            {
+                                            'name': row_list[1],
+                                            'personId': row_list[3],
+                                            'ranking': comp['ranking'],
+                                            'registration_id': registration_id
+                                            }
+                                        )
+                else:
+                    competitor_information.append(
+                        {
+                        'name': row_list[1],
+                        'country': row_list[2],
+                        'role': role,
+                        'personId': row_list[3],
+                        'registration_id': registration_id,
+                        'comp_count': 0,
+                        'single': '0.00',
+                        'average': '0.00'
+                        }
+                    )
+                
+                if row_list[3]:
+                    wca_ids += (str(row_list[3]),)
+                registration_id += 1
+            line_count += 1
+    return (column_ids, event_list, event_counter, competitor_information, all_data, wca_ids)
+
+def format_schedule_time(schedule_event_time_utc, timezone_utc_offset):
+    schedule_event_time = '{}T'.format(schedule_event_time_utc.split('T')[0])
+    if (int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
+        schedule_event_time = ''.join(
+                [
+                schedule_event_time, '0', 
+                str(int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
+                ]
+            )
+    else:
+        schedule_event_time = ''.join(
+                [
+                schedule_event_time, 
+                str(int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
+                ]
+            )
+    schedule_event_time = ''.join(
+            [
+            schedule_event_time, ':', 
+            schedule_event_time_utc.split('T')[1].split(':')[1], ':', 
+            schedule_event_time_utc.split('T')[1].split(':')[2]
+            ]
+        )
+    return schedule_event_time
 
 cur = WCA_Database.query("SELECT * FROM Countries")
 
@@ -22,7 +133,6 @@ if get_registration_information:
     countries = cur.fetchall()
 
     # Extract data from WCIF file
-    lines = competition_wcif_file.splitlines()
     wca_json = json.loads(competition_wcif_file)
     
     ########## REGISTRATION ##########
@@ -37,26 +147,45 @@ if get_registration_information:
                 comp_country = country['id']
         if registrations['roles']:
             for role in registrations['roles']:
-                competitor_role += role.replace('delegate', 'WCA DELEGATE').upper() + ','
+                competitor_role = ''.join([competitor_role, role.replace('delegate', 'WCA DELEGATE').upper(), ','])
             competitor_role = competitor_role[:-1]
         for competitor_events in registrations['registration']['eventIds']:
             all_events += (competitor_events,)
             registered_events += (competitor_events,)
             
-        information = {'name': registrations['name'].split(' (')[0].strip(), 'personId': registrations['wcaId'], 'dob': registrations['birthdate'], 'gender': registrations['gender'], 'country': comp_country, 'role': competitor_role, 'guests': str(registrations['registration']['guests']), 'registered_events': registered_events, 'registration_id': registration_id}
+        information = {
+                'name': registrations['name'].split(' (')[0].strip(), 
+                'personId': registrations['wcaId'], 
+                'dob': registrations['birthdate'], 
+                'gender': registrations['gender'], 
+                'country': comp_country, 
+                'role': competitor_role, 
+                'guests': str(registrations['registration']['guests']), 
+                'registered_events': registered_events, 
+                'registration_id': registration_id
+                }
         if not registrations['wcaId']:
             information.update({'personId': ''})
         if registrations['registration']['status'] == 'accepted':
             if create_scoresheets_second_rounds_bool:
                 for comp in competitors:
                     if registrations['name'].split(' (')[0].strip() == ftfy.fix_text(comp['name']).split(' (')[0]:
-                        information.update({'ranking': comp['ranking'], 'registration_id': comp['competitor_id']})
+                        information.update(
+                                    {
+                                    'ranking': comp['ranking'], 
+                                    'registration_id': comp['competitor_id']
+                                    }
+                                )
                         competitor_information_wca.append(information)
                         break
             elif use_cubecomps_ids:
                 for comp in competitors_api:
                     if registrations['name'].split(' (')[0].strip() == ftfy.fix_text(comp['name']).split(' (')[0]:
-                        information.update({'registration_id': comp['competitor_id']})
+                        information.update(
+                                    {
+                                    'registration_id': comp['competitor_id']
+                                    }
+                                )
                         competitor_information_wca.append(information)
                         break
             else:
@@ -67,6 +196,7 @@ if get_registration_information:
     # For every event parse information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
     minimal_scramble_set_count = 1
     for wca_events in wca_json['events']:
+        event_counter_wca += 1
         for wca_rounds in wca_events['rounds']:
             cutoff_number, cutoff, limit = 0, 0, 0
             advancing_competitors, advancing_competitors, cumulative = '', '', ''
@@ -81,7 +211,7 @@ if get_registration_information:
                     limit = int(wca_rounds['timeLimit']['centiseconds'] / 100)
                     if wca_rounds['timeLimit']['cumulativeRoundIds']:
                         for cumulative_event in wca_rounds['timeLimit']['cumulativeRoundIds']:
-                            cumulative += event_dict[cumulative_event[:-3]] + ', '
+                            cumulative = ''.join([cumulative, event_dict[cumulative_event[:-3]], ', '])
                         cumulative = cumulative[:-2]
                 else:
                     limit = 3600
@@ -89,22 +219,32 @@ if get_registration_information:
                 if wca_rounds['advancementCondition']['type'] == 'percent':
                     advancing_competitors = str(wca_rounds['advancementCondition']['level']) + '%'
                 elif wca_rounds['advancementCondition']['type'] == 'attemptResult':
-                
-                    minutes, seconds = divmod(wca_rounds['advancementCondition']['level'] / 100, 60)
-                    minutes = str(int(minutes))
-                    seconds = str(int(seconds))
-                    if len(seconds) < 2:
-                        while len(seconds) < 2:
-                            seconds = '0' + str(seconds)
-                    advancing_competitors = '<' + minutes + ':' + seconds
+                    minutes, seconds = format_minutes_and_seconds(wca_rounds['advancementCondition']['level'] / 100)
+                    advancing_competitors = '<{}:{}'.format(minutes, seconds)
                 else:
                     advancing_competitors = str(wca_rounds['advancementCondition']['level'])
             
-            wca_event_infos = {'event': wca_events['id'], 'round': wca_rounds['id'][-1:], 'format': formats[wca_rounds['format']], 'cutoff_number': cutoff_number, 'cutoff': cutoff, 'limit': limit, 'cumulative': cumulative, 'advancing': advancing_competitors}
+            wca_event_infos = {
+                    'event': wca_events['id'], 
+                    'round': wca_rounds['id'][-1:], 
+                    'format': formats[wca_rounds['format']], 
+                    'cutoff_number': cutoff_number, 
+                    'cutoff': cutoff, 
+                    'limit': limit, 
+                    'cumulative': cumulative, 
+                    'advancing': advancing_competitors
+                    }
             event_info.append(wca_event_infos)
-            event_ids_wca = event_ids_wca + (wca_events['id'],)
+            event_ids_wca += (wca_events['id'],)
             
-            group_list.append((wca_events['id'], event_dict[wca_events['id']] + wca_rounds['id'][-3:].replace('-r', ' - Round '), wca_rounds['scrambleSetCount'], advancing_competitors))
+            group_list.append(
+                        (
+                        wca_events['id'], 
+                        ''.join([event_dict[wca_events['id']], wca_rounds['id'][-3:].replace('-r', ' - Round ')]),
+                        wca_rounds['scrambleSetCount'], 
+                        advancing_competitors
+                        )
+                    )
             
             if wca_rounds['scrambleSetCount'] > minimal_scramble_set_count:
                 minimal_scramble_set_count = wca_rounds['scrambleSetCount'] 
@@ -127,22 +267,20 @@ if get_registration_information:
             if not full_schedule:
                 timezone_localize = pytz.timezone(timezone_competition)
                 timezone_utc_offset = int(str(timezone_localize.localize(datetime.datetime(year, month, day, int(schedule_event_start_utc.split('T')[1].split(':')[0]), 0, 0))).split('+')[1].split(':')[0]) 
-            schedule_event_start = schedule_event_start_utc.split('T')[0] + 'T'
-            if (int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
-                schedule_event_start += '0' + str(int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-            else:
-                schedule_event_start += str(int(schedule_event_start_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-            schedule_event_start += ':' + schedule_event_start_utc.split('T')[1].split(':')[1] + ':' + schedule_event_start_utc.split('T')[1].split(':')[2]
-            
+            schedule_event_start = format_schedule_time(schedule_event_start_utc, timezone_utc_offset)
+
             schedule_event_end_utc = schedule_events['endTime']
-            schedule_event_end = schedule_event_end_utc.split('T')[0] + 'T'
-            if (int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
-                schedule_event_end += '0' + str(int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-            else:
-                schedule_event_end += str(int(schedule_event_end_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-            schedule_event_end += ':' + schedule_event_end_utc.split('T')[1].split(':')[1] + ':' + schedule_event_end_utc.split('T')[1].split(':')[2]
-                
-            wca_event_information = {'id': str(schedule_events['id']), 'round_number': schedule_round_id, 'event_id': schedule_events['activityCode'].split('-')[0], 'event_name': schedule_events['name'].replace(',', ' -').replace(' Cube', ''), 'acitivityCode': schedule_events['activityCode'], 'startTime': schedule_event_start, 'endTime': schedule_event_end}
+            schedule_event_end = format_schedule_time(schedule_event_end_utc, timezone_utc_offset)
+            
+            wca_event_information = {
+                    'id': str(schedule_events['id']), 
+                    'round_number': schedule_round_id, 
+                    'event_id': schedule_events['activityCode'].split('-')[0], 
+                    'event_name': schedule_events['name'].replace(',', ' -').replace(' Cube', ''), 
+                    'acitivityCode': schedule_events['activityCode'], 
+                    'startTime': schedule_event_start, 
+                    'endTime': schedule_event_end
+                    }
             full_schedule.append(wca_event_information)
     else:
         print('No schedule found on WCA website.')
@@ -151,15 +289,22 @@ if get_registration_information:
     if wca_info and not create_only_schedule:
         competitor_information = competitor_information_wca
     
-        event_list_wca = sorted(Counter(all_events))
+        event_list_wca = sorted(collections.Counter(all_events))
         number_events = len(event_list_wca)
         registration_index = 0
         wca_ids = ()
     
         for person in competitor_information:
-            event_string = [person['guests'], ftfy.fix_text(person['name']), person['country'], person['personId'], person['dob'], person['gender']]
+            event_string = [
+                    person['guests'], 
+                    ftfy.fix_text(person['name']), 
+                    person['country'], 
+                    person['personId'], 
+                    person['dob'], 
+                    person['gender']
+                    ]
             if person['personId']:
-                wca_ids = wca_ids + (person['personId'],)
+                wca_ids += (person['personId'],)
             for index in range(0, number_events):
                 event_string.append('0')
             registration_list_wca.append(event_string)
@@ -168,7 +313,6 @@ if get_registration_information:
                 if event in person['registered_events']:
                     id = event_list_wca.index(event) + 6
                     registration_list_wca[registration_index][id] = '1'
-
             registration_index += 1
 
         if not registration_list_wca:
@@ -184,10 +328,10 @@ if get_registration_information:
             if event in column_ids:
                 new_id = {event: counter + 6}
                 column_ids.update(new_id)
-                event_list = event_list + (event,)
+                event_list += (event,)
                 counter += 1
 
-    round_counter = Counter(event_ids_wca)
+    round_counter = collections.Counter(event_ids_wca)
 
     if group_list:
         print('WCA information sucessfully imported.')
@@ -210,54 +354,11 @@ if get_registration_information:
     registration_id = 1
     if not wca_info:
         print('Open registration file...')
-        file = open(file_name)
-    
-        all_data = []
-        wca_ids = ()
-        event_list = ()
-    
-        line_count = 0
-    
-        for row in file:
-            row_list = row.split(',')
-            row_list[1] = row_list[1].split(' (')[0]
-            last_entry = len(row_list) - 1
-            row_list[last_entry] = row_list[last_entry].replace('\n', '')
-            if line_count == 0:
-                if (new_creation and not row.startswith('Status')) or (reading_grouping_from_file and not 'Name' in row):
-                    print('')
-                    print('ERROR!! Missing header-line in registration file, script aborted.')
-                    sys.exit()
-                counter = 0
-                for event in row_list:
-                    if event in column_ids:
-                        new_id = {event: counter}
-                        column_ids.update(new_id)
-                        event_list += (event,)
-                        event_counter += 1
-                    counter += 1
-        
-            else:
-                all_data.append(row_list)
-                role = ''
-                if row_list[3]:
-                    for person in competitor_information_wca:
-                        if row_list[3] == person['personId']:
-                            if person['role']:
-                                role = person['role']
-                if new_creation or reading_grouping_from_file:
-                    competitor_information.append({'name': row_list[1], 'country': row_list[2], 'role': role, 'personId': row_list[3], 'registration_id': registration_id})
-                else:
-                    for comp in competitors:
-                        if row_list[1] == comp['name'].split(' (')[0]:
-                            competitor_information.append({'name': row_list[1], 'personId': row_list[3], 'ranking': comp['ranking'], 'registration_id': registration_id})    
-                if row_list[3]:
-                    wca_ids += (str(row_list[3]),)
-                registration_id += 1
-            line_count += 1
-    
+        use_csv_registration_file = True
+        column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = get_registration_from_file(file_name, new_creation, reading_grouping_from_file, use_csv_registration_file, column_ids, event_counter, competitor_information_wca, competitors)
+
         registration_list = sorted(sorted(all_data, key= lambda x: x[1]), key=lambda x: x[1].split()[-1])
-        
+    
         if event_counter != event_counter_wca:
             print('ERROR!! Number of events from WCA Website does not match number of events in registration data. Please use correct registration file. Abort script.')
             sys.exit()
@@ -267,39 +368,8 @@ if get_registration_information:
 
 ### Parse registration file
 if read_only_registration_file:
-    file = open(file_name)
-    
-    all_data = []
-    wca_ids, event_list = (), ()
-    
-    line_count = 0
-    
-    for row in file:
-        row_list = row.split(',')
-        row_list[1] = row_list[1].split(' (')[0]
-        last_entry = len(row_list) - 1
-        row_list[last_entry] = row_list[last_entry].replace('\n', '')
-        if line_count == 0:
-            if not row.startswith('Status') or not 'Name' in row:
-                print('')
-                print('ERROR!! Missing header-line in registration file, script aborted.')
-                sys.exit()
-            counter = 0
-            for event in row_list:
-                if event in column_ids:
-                    new_id = {event: counter}
-                    column_ids.update(new_id)
-                    event_list += (event,)
-                    event_counter += 1
-                counter += 1
-        
-        else:
-            all_data.append(row_list)
-            role = ''
-            competitor_information.append({'name': row_list[1], 'country': row_list[2], 'role': role, 'personId': row_list[3], 'registration_id': registration_id, 'comp_count': 0, 'single': '0.00', 'average': '0.00'})
-            if row_list[3]:
-                wca_ids += (str(row_list[3]),)
-        line_count += 1
+    use_csv_registration_file = False
+    column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = get_registration_from_file(file_name, new_creation, reading_grouping_from_file, use_csv_registration_file, column_ids, event_counter, competitor_information_wca, competitors)
     
 ### Create schedule (if exists on WCA website)
 if full_schedule:
@@ -316,7 +386,13 @@ if full_schedule:
             if schedule_event['event_id'] not in day['events']:
                 day['events'].append(schedule_event['event_id'])
         else:
-            events_per_day.append({'day': event_day_name, 'day_id': event_day_id, 'events': [schedule_event['event_id']]})
+            events_per_day.append(
+                        {
+                        'day': event_day_name, 
+                        'day_id': event_day_id, 
+                        'events': [schedule_event['event_id']]
+                        }
+                    )
 
     for competitor in registration_list:
         competing_day, competing_per_day_list = [], []
@@ -327,7 +403,7 @@ if full_schedule:
                         if event_column in days['events']:
                             competing_day.append(days['day_id'])
 
-        competing_per_day = Counter(competing_day)
+        competing_per_day = collections.Counter(competing_day)
         competing_day = sorted(set(competing_day))
         counter = 0
         for day in competing_day:
@@ -338,7 +414,12 @@ if full_schedule:
         competitor.append(competing_per_day_list)
     
     if create_schedule:
-        create_schedule_file(competition_name, competition_name_stripped, full_schedule, event_info, competition_days, competition_start_day, timezone_utc_offset, formats, format_names, round_counter)
+        create_schedule_file(
+                competition_name, competition_name_stripped, full_schedule, 
+                event_info, competition_days, competition_start_day, 
+                timezone_utc_offset, formats, format_names, 
+                round_counter
+                )
         if create_only_schedule:
             sys.exit()
             
@@ -350,8 +431,11 @@ elif create_schedule:
 if create_registration_file_bool:
     print('')
     print('Create registration file...')
-    output_registration = competition_name + '/' + competition_name_stripped + 'Registration.csv'
-    create_registration_file(output_registration, registration_list, column_ids, competition_days)
+    output_registration = '{}/{}Registration.csv'.format(competition_name, competition_name_stripped)
+    create_registration_file(
+            output_registration, registration_list, 
+            column_ids, competition_days
+            )
 
     print('Registration file successfully created.')
     print('')

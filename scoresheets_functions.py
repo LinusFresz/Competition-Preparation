@@ -220,26 +220,18 @@ def write_scoresheets_second_round(label, width, height, information):
 
     ranking = enlarge_string(ranking, ' ', 3)
     label.add(shapes.String(width-22, height-80, ranking, fontSize=12, fontName='Arial'))
-
     if not comp_name:
         scoresheet_blank_header(label, height, width, competition_name, '')
     else:
         label.add(shapes.String(10, height-16, competition_name, fontSize=10, fontName='Arial'))
 
-    if registration_id:
-        registration_id = enlarge_string(registration_id, ' ', 3)
-        label.add(shapes.Rect(10,height-83,22, 15, fillColor=colors.white))
-        label.add(shapes.String(14, height-79, registration_id, fontSize=10, fontName='Arial'))
-
-    # making header for result-boxes: # attempt, result (with (cumulative) limits), judge and competitor signature
-    limit_width = stringWidth(limit, 'Arial', font_size_limit)
-    height = scoresheet_results_header(label, limit, limit_width, font_size_limit, height, scrambler_signature)
-
-    # creation of result boxes, depending on # of attempts for event and round
-    height = scoresheet_result_boxes(label, height, width, format, event, cutoff_number, cutoff_time, name, scrambler_signature)
-    
-    # add unlabelled box for extras and provisional solves
-    scoresheet_extra(label, height, width, scrambler_signature)
+    scoresheet_body(
+            registration_id, '', limit, \
+            font_size_limit, label, \
+            height, width, scrambler_signature, \
+            format, event, cutoff_number, \
+            cutoff_time, name \
+            )
     
 def write_blank_sheets(label, width, height, information):    
     name = information[0]
@@ -324,6 +316,15 @@ def write_scoresheets(label, width, height, information):
     else:
         label.add(shapes.String(10, height-16, competition_name, fontSize=10, fontName='Arial'))
 
+    scoresheet_body(
+            registration_id, group, limit, \
+            font_size_limit, label, \
+            height, width, scrambler_signature, \
+            event['format'], event['event'], str(event['cutoff_number']), \
+            cutoff_time, name \
+            )
+    
+def scoresheet_body(registration_id, group, limit, font_size_limit, label, height, width, scrambler_signature, event_format, event_name, cutoff_number, cutoff_time, name):
     if registration_id:
         registration_id = enlarge_string(registration_id, ' ', 3)
         label.add(shapes.Rect(10,height-83,22, 15, fillColor=colors.white))
@@ -335,7 +336,7 @@ def write_scoresheets(label, width, height, information):
     height = scoresheet_results_header(label, limit, limit_width, font_size_limit, height, scrambler_signature)
 
     # creation of result boxes, depending on # of attempts for event and round
-    height = scoresheet_result_boxes(label, height, width, event['format'], event['event'], str(event['cutoff_number']), cutoff_time, name, scrambler_signature)
+    height = scoresheet_result_boxes(label, height, width, event_format, event_name, cutoff_number, cutoff_time, name, scrambler_signature)
     
     # add unlabelled box for extras and provisional solves 
     scoresheet_extra(label, height, width, scrambler_signature)

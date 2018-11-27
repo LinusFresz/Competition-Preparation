@@ -1,6 +1,6 @@
-import pymysql, sys
+import sys
+import pymysql
 from pymysql.cursors import Cursor
-
 
 class Database:
     def __init__(self, db: str, host: str, user: str, passwd: str, port: int = 3306, socket: str = None):
@@ -8,18 +8,12 @@ class Database:
             try: 
                 self.cnx = pymysql.connect(host=host, port=port, user=user, passwd=passwd, db=db, autocommit=True)
             except pymysql.Error as error:
-                print('An error occured while connecting to the WCA database:')
-                print(error)
-                print('\n Script aborted.')
-                sys.exit()
+                self.db_error_message(error)
         else:
             try:
                 self.cnx = pymysql.connect(host=host, unix_socket=socket, user=user, passwd=passwd, db=db, autocommit=True)
             except pymysql.Error as error:
-                print('An error occured while connecting to the WCA database:')
-                print(error)
-                print('\n Script aborted.')
-                sys.exit()
+                self.db_error_message(error)
 
     def begin_transaction(self):
         self.cnx.autocommit(False)
@@ -33,3 +27,7 @@ class Database:
         cursor.execute(query, args)
 
         return cursor
+        
+    def db_error_message(self, error):
+        print('An error occured while connecting to the WCA database:\n {}\n\n Script aborted.'.format(error))
+        sys.exit()

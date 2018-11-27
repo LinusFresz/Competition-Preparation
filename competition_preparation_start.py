@@ -6,12 +6,18 @@ from wca_registration import *
 
 # collection of booleans and variables for various different options from this script
 blank_sheets, create_only_nametags, new_creation, reading_scrambling_list_from_file, create_scoresheets_second_rounds_bool, reading_grouping_from_file, only_one_competitor, create_registration_file_bool, create_only_registration_file, read_only_registration_file, create_schedule, create_only_schedule, scrambler_signature, use_cubecomps_ids = (False for i in range(14))
-get_registration_information, two_sided_nametags = (True for i in range(2))
+get_registration_information, two_sided_nametags, valid_cubecomps_link = (True for i in range(3))
 scoresheet_competitor_name, cubecomps_id = '', ''
-competitors_api = []
 
-
-event_dict = {'333': '3x3x3', '222': '2x2x2', '444': '4x4x4', '555': '5x5x5', '666': '6x6x6', '777': '7x7x7', '333bf': '3x3x3 Blindfolded', '333fm': '3x3x3 Fewest Moves', '333oh': '3x3x3 One-Handed', '333ft': '3x3x3 With Feet', 'clock': 'Clock', 'minx': 'Megaminx', 'pyram': 'Pyraminx', 'skewb': 'Skewb', 'sq1': 'Square-1', '444bf': '4x4x4 Blindfolded', '555bf': '5x5x5 Blindfolded', '333mbf': '3x3x3 Multi-Blindfolded'}
+event_dict = {
+        '333': '3x3x3', '222': '2x2x2', '444': '4x4x4', '555': '5x5x5', 
+        '666': '6x6x6', '777': '7x7x7', '333bf': '3x3x3 Blindfolded', 
+        '333fm': '3x3x3 Fewest Moves', '333oh': '3x3x3 One-Handed', 
+        '333ft': '3x3x3 With Feet', 'clock': 'Clock', 'minx': 'Megaminx', 
+        'pyram': 'Pyraminx', 'skewb': 'Skewb', 'sq1': 'Square-1', 
+        '444bf': '4x4x4 Blindfolded', '555bf': '5x5x5 Blindfolded', 
+        '333mbf': '3x3x3 Multi-Blindfolded'
+        }
 
 ### Selection of script functions
 while True:
@@ -83,22 +89,7 @@ if new_creation or create_only_nametags:
             print('Please enter cubecomps link to competition: (leave blank if not needed)')
             cubecomps_id = input()
         if cubecomps_id:
-            try:
-                cubecomps_id.split('?')[1].split('&')[0].split('=')[1]
-            except IndexError:
-                print('ERROR! Not a valid cubecomps link, script continues without cubecomps.com information.')
-                
-            comp_id = cubecomps_id.split('?')[1].split('&')[0].split('=')[1]
-            cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}'.format(comp_id)
-            cubecomps_api = requests.get(cubecomps_api_url).json()
-            
-            if cubecomps_api['name'] != competition_name:
-                print('Cubecomps link does not match given competition name. Script uses fallback to registration ids from WCA website!')
-                cubecomps_api['competitors'] = []
-            else:
-                for competitor in cubecomps_api['competitors']:
-                    competitors_api.append({'name': competitor['name'], 'competitor_id': int(competitor['id'])})
-                use_cubecomps_ids = True
+            competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
         
     if create_only_nametags and not two_sided_nametags and not wca_info:
         get_registration_information = False
@@ -118,7 +109,7 @@ if new_creation or create_only_nametags:
             reading_scrambling_list_from_file = True
             scrambling_file_name = get_file_name('scrambling')
 
-    file_name, grouping_file_name = competition_information_fetch(wca_info, False, create_only_nametags, new_creation)
+    file_name, grouping_file_name = competition_information_fetch(wca_info, False, create_only_nametags and two_sided_nametags, new_creation)
 
     if create_only_nametags and not two_sided_nametags and not wca_info:
         True
@@ -145,12 +136,11 @@ elif reading_grouping_from_file:
 
 # create schedule from wca website information
 elif create_only_schedule:
-    bool = True
     wca_info = wca_registration_system()
     if not wca_info:
         print('ERROR!! Schedule can only be generated from WCA website data. Script aborted.')
         sys.exit()
-    wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(bool)
+    wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(True)
     two_sided_nametags = False
     
     file_name, grouping_file_name = competition_information_fetch(wca_info, False, two_sided_nametags, new_creation)
@@ -160,47 +150,35 @@ elif create_only_schedule:
 # create scoresheets for seconds rounds by using cubecomps.com information
 elif create_scoresheets_second_rounds_bool:
     cubecomps_id = input('Link to previous round: ')
-    
-    try:
-        cubecomps_id.split('//')[1].split('?')[1].split('&')[2].split('=')[1]
-    except IndexError:
-        print('ERROR! Not a valid cubecomps link, script aborted.')
-        sys.exit()
-    
-    print('Get round information from cubecomps.com...')
-    print('')
-
-    comp_id = cubecomps_id.split('//')[1].split('?')[1].split('&')[0].split('=')[1]
-    event_id = cubecomps_id.split('//')[1].split('?')[1].split('&')[1].split('=')[1]
-    round_id = cubecomps_id.split('//')[1].split('?')[1].split('&')[2].split('=')[1]
-    cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}/events/{}/rounds/{}'.format(comp_id, event_id, round_id)
-    cubecomps_api = requests.get(cubecomps_api_url).json()
-    competition_name = cubecomps_api['competition_name']
-    create_competition_folder(competition_name)
-    competition_name_stripped = competition_name.replace(' ', '')
-    competitors_start = False
-    counter, competitor, advancing_competitors_next_round = 0, 0, 0
-    competitors = []
-
-    event_round_name = '{} - {}'.format(cubecomps_api['event_name'], cubecomps_api['round_name']) 
-    
-    for competitor in cubecomps_api['results']:
-        if competitor['top_position']:
-            advancing_competitors_next_round += 1
-            competitors_api.append({'name': competitor['name'], 'competitor_id': int(competitor['competitor_id']), 'ranking': int(competitor['position'])})
-    competitors = competitors_api
+    cubecomps_api, competitors, event_round_name, advancing_competitors_next_round, competition_name, competition_name_stripped = get_round_information_from_cubecomps(cubecomps_id)
     
     event_2 = event_round_name.split(' - ')[0].replace(' Cube', '')
     event_2 = list(event_dict.keys())[list(event_dict.values()).index(event_2)]
     
-    current_round_number = event_round_name.split(' - ')[1].replace('Round', '').replace('Combined', 'Round').replace('Final', '').replace('First', '-r1').replace('Second', '-r2').replace('Semi', '-r3').replace(' ', '')[-1:]
+    current_round_number = event_round_name.split(' - ')[1] \
+            .replace('Round', '') \
+            .replace('Combined', 'Round') \
+            .replace('Final', '') \
+            .replace('First', '-r1') \
+            .replace('Second', '-r2') \
+            .replace('Semi', '-r3') \
+            .replace(' ', '')[-1:]
     if current_round_number.isdigit():
         round_number = int(current_round_number) + 1
     else:
         print('Please open next round before using script. Script aborted.')
         sys.exit()
 
-    next_round_name = event_round_name.split(' - ')[0].replace(' Cube', '') + ' -' + event_round_name.split(' - ')[1].replace('First', '').replace('Second', '').replace('Semi', '').replace('Combined ', ' Round') + ' ' + str(round_number)
+    next_round_name = '{} -{} {}'.format(
+            event_round_name.split(' - ')[0].replace(' Cube', ''), 
+            event_round_name.split(' - ')[1] \
+                    .replace('First', '') \
+                    .replace('Second', '') \
+                    .replace('Semi', '') \
+                    .replace('Combined ', ' Round'), 
+            str(round_number)
+            )
+    
     event_round_name = next_round_name.replace(' 4', '')
 
     wca_password, wca_mail = wca_registration(new_creation)
