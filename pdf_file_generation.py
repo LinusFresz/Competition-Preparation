@@ -27,13 +27,19 @@ import requests
 import labels
 import pytz
 import datetime
-
-#from collections import Counter
 from PyPDF2 import PdfFileReader, PdfFileWriter, PdfFileMerger
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import registerFont, stringWidth
 from reportlab.graphics import shapes
 from reportlab.lib import colors
+
+if not os.path.isfile('Trebuchet.ttf'):
+    print("ERROR!! File 'Trebuchet.ttf' does not exist. Please download from \n",
+           "https://www.fontpalace.com/font-download/Trebuchet+MS/\n and add to",
+           "{}/.".format(os.path.dirname(os.path.abspath(__file__))))
+    sys.exit()
+
+registerFont(TTFont('Arial', 'Trebuchet.ttf'))
 
 def create_two_strings_out_of_one(input_string, font_size, width):
     input_string_string1 = ''
@@ -70,14 +76,6 @@ def format_minutes_and_seconds(time_string):
     minutes = str(minutes)
     seconds = enlarge_string(str(seconds), '0', 2)
     return (minutes, seconds)
-
-if not os.path.isfile('Trebuchet.ttf'):
-    print("ERROR!! File 'Trebuchet.ttf' does not exist. Please download from \n",
-           "https://www.fontpalace.com/font-download/Trebuchet+MS/\n and add to",
-           "{}/.".format(os.path.dirname(os.path.abspath(__file__))))
-    sys.exit()
-
-registerFont(TTFont('Arial', 'Trebuchet.ttf'))
 
 def create_blank_sheets(write_blank_sheets, competition_name, scrambler_signature, blank_sheets_round_name):
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
@@ -469,10 +467,9 @@ def write_grouping(label, width, height, information):
                 does_scramble = True
                 for rounds in range(1,group_count+1):
                     if str(rounds) != group_number and rounds in scrambling:
-                        group_string = 's{},'.format(str(rounds))
+                        group_string = '{}s{},'.format(group_string, str(rounds))
                     elif str(rounds) == group_number:
-                        group_string = '{},'.format(str(group_number))
-
+                        group_string = '{}{},'.format(group_string, str(group_number))
                 group_string = group_string[:-1]
             else:
                 group_string = str(group_number)

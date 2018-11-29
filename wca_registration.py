@@ -97,7 +97,11 @@ def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stri
     
     wca_headers = {'grant_type':'password', 'username':wca_mail, 'password':wca_password, 'scope':'public manage_competitions'}
     wca_request_token = requests.post(url1, data=wca_headers)
-    wca_access_token = json.loads(wca_request_token.text)['access_token']
+    try:
+        wca_access_token = json.loads(wca_request_token.text)['access_token']
+    except KeyError:
+        print('ERROR!! Failed to get competition information.\n\n Given error message: {}\n Message:{}\n\nScript aborted.'.format(json.loads(wca_request_token.text)['error'], json.loads(wca_request_token.text)['error_description']))
+        sys.exit()
     wca_authorization = 'Bearer ' + wca_access_token
     wca_headers2 = {'Authorization': wca_authorization}
     competition_wcif_info = requests.get(url2, headers=wca_headers2)

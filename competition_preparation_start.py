@@ -7,7 +7,8 @@ from wca_registration import *
 # collection of booleans and variables for various different options from this script
 blank_sheets, create_only_nametags, new_creation, reading_scrambling_list_from_file, create_scoresheets_second_rounds_bool, reading_grouping_from_file, only_one_competitor, create_registration_file_bool, create_only_registration_file, read_only_registration_file, create_schedule, create_only_schedule, scrambler_signature, use_cubecomps_ids = (False for i in range(14))
 get_registration_information, two_sided_nametags, valid_cubecomps_link = (True for i in range(3))
-scoresheet_competitor_name, cubecomps_id = '', ''
+scoresheet_competitor_name, cubecomps_id, competitors = '', '', ''
+competitors_api = []
 
 event_dict = {
         '333': '3x3x3', '222': '2x2x2', '444': '4x4x4', '555': '5x5x5', 
@@ -116,7 +117,7 @@ if new_creation or create_only_nametags:
     else:
         competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
     
-    print('Saved results, extracting data now.')  
+    print('Saved registration information from WCA website, extracting data now.')  
     
 # create blank scoresheets
 elif blank_sheets:
@@ -178,7 +179,6 @@ elif create_scoresheets_second_rounds_bool:
                     .replace('Combined ', ' Round'), 
             str(round_number)
             )
-    
     event_round_name = next_round_name.replace(' 4', '')
 
     wca_password, wca_mail = wca_registration(new_creation)

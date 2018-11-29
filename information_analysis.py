@@ -1,17 +1,11 @@
 '''
-Data extraction of WCIF and registration file (if used). Not too interesting, mainly a lot of parsing in .txt files (registration file and/or wcif file).    
+    Data extraction of WCIF and registration file (if used).   
 '''
 
 from competition_preparation_start import *
 
 # initialize various variables for parsing and analysis
-events, events_now, persons, accepted, roles, cumulative_rounds, schedule = (False for i in range(7))
-registered_events, final_registration_list, all_events, event_ids_wca = (() for i in range(4)) 
-registration_list, registration_list_wca, group_list, competitor_information, competitor_information_wca, event_info, full_schedule, events_per_day, competing_day = ([] for i in range(9))
-event_id, round_id, competitor_role, guests, cumulative, advancing_competitiors, advancing_type = ('' for i in range(7))
-event_counter, event_counter_wca, group_count, cutoff_number, cutoff, round_counter, competition_days = (0 for i in range(7))
-registration_id = 1
-
+registration_list, competitor_information = [], []
 column_ids = {
         '333': 999, '222': 999, '444': 999, '555': 999, '666': 999, 
         '777': 999, '333bf': 999, '333fm': 999, '333oh': 999, '333ft': 999, 
@@ -95,7 +89,6 @@ def get_registration_from_file(file_name, new_creation, reading_grouping_from_fi
                         'average': '0.00'
                         }
                     )
-                
                 if row_list[3]:
                     wca_ids += (str(row_list[3]),)
                 registration_id += 1
@@ -127,17 +120,10 @@ def format_schedule_time(schedule_event_time_utc, timezone_utc_offset):
         )
     return schedule_event_time
 
-cur = WCA_Database.query("SELECT * FROM Countries")
-
-if get_registration_information:
-    countries = cur.fetchall()
-
-    # Extract data from WCIF file
-    wca_json = json.loads(competition_wcif_file)
-    
-    ########## REGISTRATION ##########
-        # get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for
-    registration_id = 1    
+def get_registrations_from_wcif(wca_json, countries, create_scoresheets_second_rounds_bool, use_cubecomps_ids, competitors, competitors_api):
+    registration_id = 1   
+    all_events = () 
+    competitor_information_wca = []
     for registrations in wca_json['persons']:
         registered_events = ()
         competitor_role = ''
@@ -191,10 +177,14 @@ if get_registration_information:
             else:
                 competitor_information_wca.append(information)
             registration_id += 1
+    return (competitor_information_wca, all_events)
 
-    ########## EVENTS ##########
-    # For every event parse information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
+def get_events_from_wcif(wca_json, event_dict):
     minimal_scramble_set_count = 1
+    event_counter_wca = 0
+    group_list = []
+    event_ids_wca = ()
+    event_info = []
     for wca_events in wca_json['events']:
         event_counter_wca += 1
         for wca_rounds in wca_events['rounds']:
@@ -245,13 +235,12 @@ if get_registration_information:
                         advancing_competitors
                         )
                     )
-            
             if wca_rounds['scrambleSetCount'] > minimal_scramble_set_count:
                 minimal_scramble_set_count = wca_rounds['scrambleSetCount'] 
-
-    ########## SCHEDULE ##########
-    # get schedule information from wca website
-    # used for sorting of scramblerlist + creating a PDF containing the schedule 
+    return (event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count)
+    
+def get_schedule_from_wcif(wca_json):
+    full_schedule, events_per_day, competing_day = [], [], []
     if wca_json['schedule']['venues']:   
         timezone_competition = wca_json['schedule']['venues'][0]['timezone']
         competition_days = wca_json['schedule']['numberOfDays']
@@ -284,7 +273,31 @@ if get_registration_information:
             full_schedule.append(wca_event_information)
     else:
         print('No schedule found on WCA website.')
+    return (full_schedule, competition_days, competition_start_day, timezone_utc_offset, events_per_day)
 
+cur = WCA_Database.query("SELECT * FROM Countries")
+
+if get_registration_information:
+    countries = cur.fetchall()
+
+    # Extract data from WCIF file
+    wca_json = json.loads(competition_wcif_file)
+    
+    ########## REGISTRATION ##########
+        # get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for
+    competitor_information_wca, all_events = get_registrations_from_wcif(
+            wca_json, countries, create_scoresheets_second_rounds_bool, \
+            use_cubecomps_ids, competitors, competitors_api \
+            )
+
+    ########## EVENTS ##########
+    # For every event parse information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
+    event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count = get_events_from_wcif(wca_json, event_dict)
+
+    ########## SCHEDULE ##########
+    # get schedule information from wca website
+    # used for sorting of scramblerlist + creating a PDF containing the schedule 
+    full_schedule, competition_days, competition_start_day, timezone_utc_offset, events_per_day = get_schedule_from_wcif(wca_json)
 
     if wca_info and not create_only_schedule:
         competitor_information = competitor_information_wca
@@ -293,6 +306,7 @@ if get_registration_information:
         number_events = len(event_list_wca)
         registration_index = 0
         wca_ids = ()
+        registration_list_wca = []
     
         for person in competitor_information:
             event_string = [

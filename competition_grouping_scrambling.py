@@ -205,7 +205,7 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
                             repeat_selectscrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string)
                             break
                     loop_counter += 1
-    return result_string
+    return (result_string, scramblerlist)
 
 # part of the checking process: check if scrambler already scrambles more than average
 def scrambling_average(personId):
@@ -342,37 +342,23 @@ if new_creation or create_only_nametags:
 # syntax of grouping and scrambling function: 
 # selectscrambler(event, roundnumber, eventid, scrambler, firstscrambler, lastscrambler, groups)
 # - definition of # scramblers per event
-scrambler_count_list = {}
-for event in ('333fm', '333mbf'):
-    scrambler_count_list.update({event: 0})
-for event in ('333bf', '333ft', '444bf', '555bf'):
-    scrambler_count_list.update({event: 3})
-for event in ('222', '333', '444', '555', '333oh', 'pyram', 'minx', 'skewb', 'sq1'):
-    scrambler_count_list.update({event: 4})
-for event in ('555', '666', '777', 'clock'):
-    scrambler_count_list.update({event: 5})
-
-if reading_grouping_from_file:
-    for rounds in group_list:
-        event = rounds[0]
-        round_name = rounds[1]
-        round_number = int(rounds[1][-1:])
-        groups = rounds[2]
-        advancing_competitors = rounds[3]
-        if round_number == 1:
-            event_ids.update({event: rowcount})
-            rowcount += 1
-
-previous_event, advancing_competitors = '', ''
-if new_creation:
+def run_grouping_and_scrambling(group_list, result_string, registration_list, column_ids):
     print('')
     print('Running grouping and scrambling...')
+    previous_event = ''
+    scrambler_count_list = {}
+    scramblerlist = []
+    for event in ('333fm', '333mbf'):
+        scrambler_count_list.update({event: 0})
+    for event in ('333bf', '333ft', '444bf', '555bf'):
+        scrambler_count_list.update({event: 3})
+    for event in ('222', '333', '444', '555', '333oh', 'pyram', 'minx', 'skewb', 'sq1'):
+        scrambler_count_list.update({event: 4})
+    for event in ('555', '666', '777', 'clock'):
+        scrambler_count_list.update({event: 5})
     for rounds in group_list:
-        event = rounds[0]
-        round_name = rounds[1]
-        round_number = int(rounds[1][-1:])
-        groups = rounds[2]
-        
+        event, round_name, round_number, groups = get_event_round_information(rounds)
+
         if round_number == 1:
             competitors_in_event = competitors_per_event(registration_list, column_ids[event])
         else:
@@ -395,7 +381,7 @@ if new_creation:
             if top_scrambler < min_scrambler:
                 top_scrambler = competitors_in_event
         
-        result_string = selectscrambler(
+        result_string, scramblerlist = selectscrambler(
                 event, round_number, round_name, \
                 scrambler_count_list[event], min_scrambler, \
                 top_scrambler, groups, 1, result_string
@@ -403,6 +389,25 @@ if new_creation:
         previous_event = event
         advancing_competitors = rounds[3]
         previous_competitors_in_event = competitors_in_event
+    return (result_string, scramblerlist)
+
+def get_event_round_information(event_rounds):
+    return (event_rounds[0], event_rounds[1], int(event_rounds[1][-1:]), event_rounds[2])
+
+def update_event_ids(group_list, event_ids):
+    for event_rounds in group_list:
+        event, round_name, round_number, groups = get_event_round_information(event_rounds)
+        advancing_competitors = event_rounds[3]
+        if round_number == 1:
+            event_ids.update({event: rowcount})
+            rowcount += 1
+    return (event_ids, rowcount)
+
+if reading_grouping_from_file:
+    event_ids, rowcount = update_event_ids(group_list)
+
+if new_creation:
+    result_string, scramblerlist = run_grouping_and_scrambling(group_list, result_string, registration_list, column_ids)
 
     # Add dummy columns for events with < 5 scramblers
     for scrambler_id in range(0, len(scramblerlist)):

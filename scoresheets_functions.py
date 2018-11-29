@@ -68,7 +68,7 @@ def scoresheet_result_boxes(label, height, width, format, event, cutoff_number, 
     height = height - 105
     number = 1
     number_of_attempts = int(format[-1:])
-    if (type(name) is dict and name['name'] == 'name') or (type(name) is list and name[0] == 'name'):
+    if (isinstance(name, dict) and name['name'] == 'name') or (isinstance(name, list) and name[0] == 'name'):
         number_of_attempts = 5
     for attempts in range(0,number_of_attempts):
         height -= 35
