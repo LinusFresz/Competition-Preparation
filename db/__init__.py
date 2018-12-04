@@ -1,10 +1,10 @@
 import sys
-import importlib
+from importlib import util
 
 db_not_found_string = 'No database setup found, script aborted.'
-static_folder_found = importlib.util.find_spec('static') is not None
+static_folder_found = util.find_spec('static') is not None
 if static_folder_found:
-    db_credentials_found = importlib.util.find_spec('static.config')
+    db_credentials_found = util.find_spec('static.config')
     if not db_credentials_found:
         print(db_not_found_string)
         sys.exit()

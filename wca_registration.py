@@ -2,8 +2,7 @@
 Multiple functions to log in on the WCA website and catch all necessary competition and competitor registration information
 '''
 
-from pdf_file_generation import *
-from db import WCA_Database
+from modules import *
 
 ### Error handling for WCA website login errors
 def error_handling_wcif(competition_name, competition_page):
