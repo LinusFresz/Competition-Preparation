@@ -25,8 +25,6 @@ event_dict = {
         '444bf': '4x4x4 Blindfolded', '555bf': '5x5x5 Blindfolded',
         '333mbf': '3x3x3 Multi-Blindfolded'
         }
-
-scramblerlist, result_string = [], []
 event_ids = {
         '333': 999, '222': 999, '444': 999, '555': 999,
         '666': 999, '777': 999, '333bf': 999, '333fm': 999,
@@ -34,6 +32,7 @@ event_ids = {
         'clock': 999, 'skewb': 999, 'sq1': 999, '444bf': 999,
         '555bf': 999, '333mbf': 999
         }
+scramblerlist, result_string = [], []
 
 ### Selection of script functions
 while True:
@@ -86,8 +85,7 @@ while True:
             print('Quitting programm.')
             sys.exit()
 
-    print("Wrong input, please enter one of the available options.")
-    print('')
+    print("Wrong input, please enter one of the available options.\n")
 
 ### Evaluation of selection and initialization
 # get necessary information for new competition

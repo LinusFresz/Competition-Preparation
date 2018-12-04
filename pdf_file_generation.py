@@ -13,7 +13,7 @@
 '''
 
 from modules import *
-from grouping_scrambling_functions import EventsRankingBySpeed
+from grouping_scrambling_functions import events_ranking_by_speed
 
 if not os.path.isfile('Trebuchet.ttf'):
     print("ERROR!! File 'Trebuchet.ttf' does not exist. Please download from \n",
@@ -82,7 +82,7 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
             counter = 0
             result_string_sorted_events = result_string
             
-            if event['event'] in EventsRankingBySpeed.events:
+            if event['event'] in events_ranking_by_speed:
                 result_string_sorted_events = sorted(result_string, key=lambda x:x[event_ids[event['event']]])
             for name in result_string_sorted_events:
                 if str(name[event_ids[event['event']]]).isdigit():

@@ -1,8 +1,7 @@
 from modules import *
 from error_messages import ErrorMessages
 
-class EventsRankingBySpeed:
-    events = (
+events_ranking_by_speed = (
         '222', '333', '444',
         '333oh', '333bf', '333ft',
         'pyram', 'skewb'
@@ -21,7 +20,7 @@ def grouping(registration_list, result_string, groups, event_column, event, rank
     grouping_ranking = registration_list
     result_string_old = result_string
 
-    if event in EventsRankingBySpeed.events:
+    if event in events_ranking_by_speed:
         grouping_ranking, result_string = [], []
         for persons in ranking:
             for competitor in range(0, len(registration_list)):
