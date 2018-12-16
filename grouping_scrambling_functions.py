@@ -68,27 +68,27 @@ def rankings(event_ranking, registration_list, ranking, event, event_column, ran
         if not has_ranking:
             ranking[person] += (99999,)
 
-def repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, competitor_information, round_counter):
+def repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter):
     error_string = 'ERROR!! Not enough scramblers found for {}'.format(round_id)
     if group_number > 1:
         error_string = ''.join([error_string, ', Group {} of {} groups'.format(str(group_number), groups)])
     error_string_id = 'no_scramblers_{}'.format(event)
     if event[0].isdigit() and len(event) > 3 and event != '333mbf' and event[:3] in event_ids_wca:
         error_string = ''.join([error_string, ', replaced with competitors from {}.'.format(round_id[:5])])
-        select_scrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, competitor_information, round_counter)
+        select_scrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
         found_scrambler = True
     ErrorMessages.messages.update({error_string_id: error_string})
 
 ### Select scramblers for each group and creates grouping
-def select_scrambler(event, round_number, round_id, scrambler_count, first_place, last_place, groups, scrambling_run_id, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, competitor_information, round_counter):
+def select_scrambler(event, round_number, round_id, scrambler_count, first_place, last_place, groups, scrambling_run_id, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter):
     ranking, event_ranking = [], []
     loop_counter = 1
 
     # add correct columnid for events AND create grouping for first rounds
     if round_number == 1:
         if scrambling_run_id == 1:
-            event_ids.update({event: rowcount})
-            rowcount += 1
+            event_ids.update({event: row_count})
+            row_count += 1
 
     # create ranking for event
     for person in registration_list:
@@ -106,8 +106,8 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
     if last_place > max_competitors:
         last_place = max_competitors
     if first_place >= last_place and scrambler_count_list[event] != 0:
-        repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, round_counter)
-        return (result_string, scrambler_list, event_ids, rowcount)
+        repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, round_counter)
+        return (result_string, scrambler_list, event_ids, row_count)
 
     # actual determination of scramblers happens here
     for group_number in range(1, groups + 1):
@@ -143,10 +143,10 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
                             last_place = max_competitors
                 
                         if loop_counter == 100000:
-                            repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, competitor_information, round_counter)
+                            repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
                             break
                     loop_counter += 1
-    return (result_string, scrambler_list, event_ids, rowcount)
+    return (result_string, scrambler_list, event_ids, row_count)
 
 # part of the checking process: check if scrambler already scrambles more than average
 def scrambling_average(personId, result_string, scrambler_list):
@@ -257,7 +257,7 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
     previous_event = ''
     scrambler_count_list = {}
     scrambler_list = []
-    rowcount = 3
+    row_count = 3
     
     # definition of # scramblers per event
     for event in ('333fm', '333mbf'):
@@ -293,13 +293,13 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
             if top_scrambler < min_scrambler:
                 top_scrambler = competitors_in_event
         
-        result_string, scrambler_list, event_ids, rowcount = select_scrambler(
+        result_string, scrambler_list, event_ids, row_count = select_scrambler(
                 event, round_number, round_name, \
                 scrambler_count_list[event], min_scrambler, \
                 top_scrambler, groups, 1, \
                 result_string, ranking_single, competition_count, \
                 event_ids, event_ids_wca, column_ids, \
-                rowcount, registration_list, scrambler_list, \
+                row_count, registration_list, scrambler_list, \
                 competitor_information, round_counter
                 )
         previous_event = event
@@ -311,14 +311,24 @@ def get_event_round_information(event_rounds):
     return (event_rounds[0], event_rounds[1], int(event_rounds[1][-1:]), event_rounds[2])
 
 def update_event_ids(group_list, event_ids):
-    rowcount = 3
+    row_count = 3
     for event_rounds in group_list:
         event, round_name, round_number, groups = get_event_round_information(event_rounds)
         advancing_competitors = event_rounds[3]
         if round_number == 1:
-            event_ids.update({event: rowcount})
-            rowcount += 1
-    return (event_ids, rowcount)
+            event_ids.update({event: row_count})
+            row_count += 1
+    return (event_ids)
+    
+def update_column_ids(event_list_wca, column_ids):
+    event_list = ()
+    counter = 0
+    for event in event_list_wca:
+        if event in column_ids:
+            column_ids.update({event: counter + 6})
+            event_list += (event,)
+            counter += 1
+    return(column_ids, event_list)
 
 def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
     scrambler_list_sorted_by_schedule = []
@@ -337,16 +347,16 @@ def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
                     scrambler_list_sorted_by_schedule.append(event_scrambler)
     return scrambler_list_sorted_by_schedule
 
-def get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags, cur):
+def get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags, sql_cursor):
     if not create_only_nametags:
-        cur.execute("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,))
-        ranking_single = cur.fetchall()
-    cur.execute("SELECT res.personId, companzahl FROM Results AS res INNER JOIN (SELECT r.personId, COUNT(DISTINCT r.competitionId) AS companzahl FROM Results AS r WHERE r.personId IN %s GROUP BY r.personId) x ON res.personId = x.personId WHERE res.personId IN %s GROUP BY res.personId", (wca_ids, wca_ids))
-    competition_count = cur.fetchall()
-    cur.execute("SELECT * FROM RanksSingle WHERE eventId = '333' and personId in %s", (wca_ids,))
-    single = cur.fetchall()
-    cur.execute("SELECT * FROM RanksAverage WHERE eventId = '333' and personId in %s", (wca_ids,))
-    average = cur.fetchall()
+        sql_cursor.execute("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,))
+        ranking_single = sql_cursor.fetchall()
+    sql_cursor.execute("SELECT res.personId, companzahl FROM Results AS res INNER JOIN (SELECT r.personId, COUNT(DISTINCT r.competitionId) AS companzahl FROM Results AS r WHERE r.personId IN %s GROUP BY r.personId) x ON res.personId = x.personId WHERE res.personId IN %s GROUP BY res.personId", (wca_ids, wca_ids))
+    competition_count = sql_cursor.fetchall()
+    sql_cursor.execute("SELECT * FROM RanksSingle WHERE eventId = '333' and personId in %s", (wca_ids,))
+    single = sql_cursor.fetchall()
+    sql_cursor.execute("SELECT * FROM RanksAverage WHERE eventId = '333' and personId in %s", (wca_ids,))
+    average = sql_cursor.fetchall()
 
     for person in competitor_information:
         single_result = get_result(person, single)

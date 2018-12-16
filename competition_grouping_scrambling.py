@@ -4,9 +4,10 @@
 
 from modules import *
 from db import WCA_Database
+from helpers import initiate_result_string, update_scrambler_list
 from wca_registration import wca_registration_system, get_file_name, competition_information_fetch, wca_registration, get_wca_info, get_information, get_competitor_information_from_cubecomps, get_round_information_from_cubecomps
-from information_analysis import column_ids, formats, format_names, get_registration_from_file, get_registrations_from_wcif, get_events_from_wcif, get_schedule_from_wcif
-from grouping_scrambling_functions import run_grouping_and_scrambling, update_event_ids, sort_scrambler_by_schedule, get_results_from_wca_export
+from information_analysis import column_ids, formats, format_names, get_registration_from_file, get_registrations_from_wcif, get_events_from_wcif, get_schedule_from_wcif, get_events_per_day, get_competitor_events_per_day, prepare_registration_for_competitors
+from grouping_scrambling_functions import run_grouping_and_scrambling, update_event_ids, update_column_ids, sort_scrambler_by_schedule, get_results_from_wca_export
 from pdf_file_generation import create_blank_sheets, create_scoresheets, create_scoresheets_second_rounds, create_registration_file, create_schedule_file, create_nametag_file, create_scrambling_file, create_grouping_file, get_grouping_from_file
 from error_messages import ErrorMessages
 
@@ -200,25 +201,24 @@ elif create_scoresheets_second_rounds_bool:
 
     competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
-
-cur = WCA_Database.query("SELECT * FROM Countries")
+sql_cursor = WCA_Database.query("SELECT * FROM Countries")
 
 if get_registration_information:
-    countries = cur.fetchall()
+    countries = sql_cursor.fetchall()
 
     # Extract data from WCIF file
     wca_json = json.loads(competition_wcif_file)
     
     ########## REGISTRATION ##########
     # get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for
-    competitor_information_wca, all_events = get_registrations_from_wcif(
+    competitor_information_wca, event_list_wca = get_registrations_from_wcif(
             wca_json, countries, create_scoresheets_second_rounds_bool, \
             use_cubecomps_ids, competitors, competitors_api \
             )
 
     ########## EVENTS ##########
     # for every event parse information about event_id, round_number, # groups, format, cutoff, time limit, (possible) cumulative limits
-    event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count = get_events_from_wcif(wca_json, event_dict)
+    event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count, round_counter = get_events_from_wcif(wca_json, event_dict)
 
     ########## SCHEDULE ##########
     # get schedule information from wca website
@@ -227,51 +227,16 @@ if get_registration_information:
 
     if wca_info and not create_only_schedule:
         competitor_information = competitor_information_wca
-    
-        event_list_wca = sorted(collections.Counter(all_events))
-        number_events = len(event_list_wca)
-        registration_index = 0
-        wca_ids = ()
-        registration_list_wca = []
-    
-        for person in competitor_information:
-            event_string = [
-                    person['guests'],
-                    ftfy.fix_text(person['name']),
-                    person['country'],
-                    person['personId'],
-                    person['dob'],
-                    person['gender']
-                    ]
-            if person['personId']:
-                wca_ids += (person['personId'],)
-            for index in range(0, number_events):
-                event_string.append('0')
-            registration_list_wca.append(event_string)
-
-            for event in event_list_wca:
-                if event in person['registered_events']:
-                    id = event_list_wca.index(event) + 6
-                    registration_list_wca[registration_index][id] = '1'
-            registration_index += 1
-
+        
+        wca_ids, registration_list_wca = prepare_registration_for_competitors(competitor_information, event_list_wca, len(event_list_wca))
+        
         if not registration_list_wca:
             print('')
             print('ERROR!! WCA registration not used for this competition. Please select registration file for import. Script aborted.')
             sys.exit()
         registration_list_wca = sorted(sorted(registration_list_wca, key=lambda x: x[1]), key=lambda x: x[1].split()[-1])
     
-        event_list = ()
-        counter = 0
-
-        for event in event_list_wca:
-            if event in column_ids:
-                new_id = {event: counter + 6}
-                column_ids.update(new_id)
-                event_list += (event,)
-                counter += 1
-
-    round_counter = collections.Counter(event_ids_wca)
+        column_ids, event_list = update_column_ids(event_list_wca, column_ids)
 
     if group_list:
         print('WCA information sucessfully imported.')
@@ -291,7 +256,6 @@ if get_registration_information:
 
     ### Get data from csv-export
     # same as for the WCA registration, get competitor information from registration file (if used): name, WCA ID, date of birth, gender, country and events registered for
-    registration_id = 1
     if not wca_info:
         print('Open registration file...')
         use_csv_registration_file = True
@@ -315,43 +279,9 @@ if read_only_registration_file:
 if full_schedule:
     full_schedule = sorted(sorted(full_schedule, key=lambda x: x['event_name']), key=lambda x: x['startTime'])
     for schedule_event in full_schedule:
-        day_exists = False
-        event_day = schedule_event['startTime'].split('T')[0]
-        event_day_id = datetime.datetime(int(event_day.split('-')[0]), int(event_day.split('-')[1]), int(event_day.split('-')[2])).weekday()
-        event_day_name = calendar.day_name[event_day_id]
-        for day in events_per_day:
-            if day['day'] == event_day_name:
-                day_exists = True
-        if day_exists:
-            if schedule_event['event_id'] not in day['events']:
-                day['events'].append(schedule_event['event_id'])
-        else:
-            events_per_day.append(
-                        {
-                        'day': event_day_name,
-                        'day_id': event_day_id,
-                        'events': [schedule_event['event_id']]
-                        }
-                    )
+        events_per_day = get_events_per_day(schedule_event, events_per_day)
 
-    for competitor in registration_list:
-        competing_day, competing_per_day_list = [], []
-        for event_column in column_ids:
-            if column_ids[event_column] != 999:
-                if competitor[column_ids[event_column]] == '1':
-                    for days in events_per_day:
-                        if event_column in days['events']:
-                            competing_day.append(days['day_id'])
-
-        competing_per_day = collections.Counter(competing_day)
-        competing_day = sorted(set(competing_day))
-        counter = 0
-        for day in competing_day:
-            competing_day[counter] = calendar.day_name[day][:3]
-            competing_per_day_list.append(competing_per_day[day])
-            counter += 1
-        competitor.append(competing_day)
-        competitor.append(competing_per_day_list)
+    registration_list = get_competitor_events_per_day(registration_list, column_ids, events_per_day)
     
     if create_schedule:
         create_schedule_file(
@@ -395,8 +325,7 @@ if create_scoresheets_second_rounds_bool:
 
 ### Create new string for grouping and add name + DOB
 if registration_list:
-    for person in registration_list:
-        result_string.append((person[1], person[2], person[3]))
+    result_string = initiate_result_string(registration_list)
         
 ### Check for matching registration and grouping information
 if create_only_nametags:
@@ -428,10 +357,10 @@ if create_only_nametags:
 if new_creation or create_only_nametags:
     if wca_ids and event_list:
         print('Get necessary results from WCA Export, this may take a few seconds...')
-        competitor_information, ranking_single, competition_count = get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags, cur)
+        competitor_information, ranking_single, competition_count = get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags, sql_cursor)
 
 if reading_grouping_from_file:
-    event_ids, rowcount = update_event_ids(group_list, event_ids)
+    event_ids = update_event_ids(group_list, event_ids)
 
 if new_creation:
     print('')
@@ -456,8 +385,7 @@ if reading_scrambling_list_from_file:
         scrambler_list = list(reader)
     del scrambler_list[0:2]
 
-    for person in range(0, len(scrambler_list)):
-        scrambler_list[person][1] = int(scrambler_list[person][1])
+    scrambler_list = update_scrambler_list(scrambler_list)
         
 ### Save results to files
 if new_creation or blank_sheets or create_only_nametags:
@@ -484,7 +412,6 @@ if new_creation or blank_sheets or create_only_nametags:
     print('Scrambling and grouping successfully saved. Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
     print('')
 
-
 ### Loop to create all remaining files: grouping and scrambling
 #EXCEPTION: no scoresheets created for 3x3x3 Fewest Moves
 if new_creation or reading_grouping_from_file:
@@ -499,7 +426,7 @@ if new_creation or reading_grouping_from_file:
             competition_name, competition_name_stripped, result_string, \
             event_ids, event_info, event_dict, \
             only_one_competitor, round_counter, competitor_information, \
-            event, scoresheet_competitor_name, scrambler_signature
+            scoresheet_competitor_name, scrambler_signature
             )
     
     # error handling for entire script

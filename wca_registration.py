@@ -72,7 +72,7 @@ def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags
 
 def wca_registration(new_creation):
     while True:
-        wca_mail = input('Your WCA mail address: ')
+        wca_mail = "lfresz@worldcubeassociation.org" #input('Your WCA mail address: ')
         if '@' not in wca_mail:
             if wca_mail[:4].isdigit() and wca_mail[8:].isdigit():
                 print('Please enter your WCA account email address instead of WCA ID.')
@@ -80,10 +80,10 @@ def wca_registration(new_creation):
                 print('Please enter valid email address.')
         else:
             break
-    wca_password = getpass.getpass('Your WCA password: ')
+    wca_password = "12345Linux" #getpass.getpass('Your WCA password: ')
     
     if new_creation:
-        competition_name = input('Competition name: ')
+        competition_name = "Munich Open 2018" #input('Competition name: ')
         create_competition_folder(competition_name)
         competition_name_stripped = competition_name.replace(' ', '')
         return (wca_password, wca_mail, competition_name, competition_name_stripped)

@@ -270,7 +270,7 @@ def create_blank_sheets(competition_name, scrambler_signature, blank_sheets_roun
     sheet.save(scoresheet_file)
     sys.exit()
 
-def create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, event, scoresheet_competitor_name, scrambler_signature):
+def create_scoresheets(competition_name, competition_name_stripped, result_string, event_ids, event_info, event_dict, only_one_competitor, round_counter, competitor_information, scoresheet_competitor_name, scrambler_signature):
     # format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)

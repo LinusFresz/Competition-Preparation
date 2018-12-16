@@ -4,6 +4,8 @@
 import pytz
 import datetime
 import ftfy
+import calendar
+import collections
 from pdf_file_generation import format_minutes_and_seconds
 
 # initialize various variables for parsing and analysis
@@ -97,6 +99,33 @@ def get_registration_from_file(file_name, new_creation, reading_grouping_from_fi
             line_count += 1
     return (column_ids, event_list, event_counter, competitor_information, all_data, wca_ids)
 
+def prepare_registration_for_competitors(competitor_information, event_list_wca, number_events):        
+    registration_index = 0
+    wca_ids = ()
+    registration_list_wca = []
+    
+    for person in competitor_information:
+        event_string = [
+                person['guests'],
+                ftfy.fix_text(person['name']),
+                person['country'],
+                person['personId'],
+                person['dob'],
+                person['gender']
+                ]
+        if person['personId']:
+            wca_ids += (person['personId'],)
+        for index in range(0, number_events):
+            event_string.append('0')
+        registration_list_wca.append(event_string)
+
+        for event in event_list_wca:
+            if event in person['registered_events']:
+                id = event_list_wca.index(event) + 6
+                registration_list_wca[registration_index][id] = '1'
+        registration_index += 1
+    return (wca_ids, registration_list_wca)
+
 def format_schedule_time(schedule_event_time_utc, timezone_utc_offset):
     schedule_event_time = '{}T'.format(schedule_event_time_utc.split('T')[0])
     if (int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
@@ -179,7 +208,9 @@ def get_registrations_from_wcif(wca_json, countries, create_scoresheets_second_r
             else:
                 competitor_information_wca.append(information)
             registration_id += 1
-    return (competitor_information_wca, all_events)
+            
+    event_list_wca = sorted(collections.Counter(all_events))
+    return (competitor_information_wca, event_list_wca)
 
 def get_events_from_wcif(wca_json, event_dict):
     minimal_scramble_set_count = 1
@@ -239,7 +270,8 @@ def get_events_from_wcif(wca_json, event_dict):
                     )
             if wca_rounds['scrambleSetCount'] > minimal_scramble_set_count:
                 minimal_scramble_set_count = wca_rounds['scrambleSetCount'] 
-    return (event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count)
+    round_counter = collections.Counter(event_ids_wca)
+    return (event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count, round_counter)
     
 def get_schedule_from_wcif(wca_json):
     full_schedule, events_per_day, competing_day = [], [], []
@@ -276,3 +308,46 @@ def get_schedule_from_wcif(wca_json):
     else:
         print('No schedule found on WCA website.')
     return (full_schedule, competition_days, competition_start_day, timezone_utc_offset, events_per_day)
+
+def get_events_per_day(schedule_event, events_per_day):
+    day_exists = False
+    event_day = schedule_event['startTime'].split('T')[0]
+    event_day_id = datetime.datetime(int(event_day.split('-')[0]), int(event_day.split('-')[1]), int(event_day.split('-')[2])).weekday()
+    event_day_name = calendar.day_name[event_day_id]
+    for day in events_per_day:
+        if day['day'] == event_day_name:
+            day_exists = True
+    if day_exists:
+        if schedule_event['event_id'] not in day['events']:
+            day['events'].append(schedule_event['event_id'])
+    else:
+        events_per_day.append(
+                    {
+                    'day': event_day_name,
+                    'day_id': event_day_id,
+                    'events': [schedule_event['event_id']]
+                    }
+                )
+    return events_per_day
+
+def get_competitor_events_per_day(registration_list, column_ids, events_per_day):
+    for competitor in registration_list:
+        competing_day, competing_per_day_list = [], []
+        for event_column in column_ids:
+            if column_ids[event_column] != 999:
+                if competitor[column_ids[event_column]] == '1':
+                    for days in events_per_day:
+                        if event_column in days['events']:
+                            competing_day.append(days['day_id'])
+
+        competing_per_day = collections.Counter(competing_day)
+        competing_day = sorted(set(competing_day))
+        counter = 0
+        for day in competing_day:
+            competing_day[counter] = calendar.day_name[day][:3]
+            competing_per_day_list.append(competing_per_day[day])
+            counter += 1
+        competitor.append(competing_day)
+        competitor.append(competing_per_day_list)
+
+    return registration_list
