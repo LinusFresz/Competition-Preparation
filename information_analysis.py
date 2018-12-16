@@ -3,6 +3,7 @@
 
 import pytz
 import datetime
+import ftfy
 from pdf_file_generation import format_minutes_and_seconds
 
 # initialize various variables for parsing and analysis

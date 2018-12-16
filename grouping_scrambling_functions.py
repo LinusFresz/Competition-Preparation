@@ -68,19 +68,19 @@ def rankings(event_ranking, registration_list, ranking, event, event_column, ran
         if not has_ranking:
             ranking[person] += (99999,)
 
-def repeat_selectscrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scramblerlist, competitor_information, round_counter):
+def repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, competitor_information, round_counter):
     error_string = 'ERROR!! Not enough scramblers found for {}'.format(round_id)
     if group_number > 1:
         error_string = ''.join([error_string, ', Group {} of {} groups'.format(str(group_number), groups)])
     error_string_id = 'no_scramblers_{}'.format(event)
     if event[0].isdigit() and len(event) > 3 and event != '333mbf' and event[:3] in event_ids_wca:
         error_string = ''.join([error_string, ', replaced with competitors from {}.'.format(round_id[:5])])
-        selectscrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scramblerlist, competitor_information, round_counter)
+        select_scrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, competitor_information, round_counter)
         found_scrambler = True
     ErrorMessages.messages.update({error_string_id: error_string})
 
 ### Select scramblers for each group and creates grouping
-def selectscrambler(event, round_number, round_id, scrambler_count, first_place, last_place, groups, scrambling_run_id, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scramblerlist, competitor_information, round_counter):
+def select_scrambler(event, round_number, round_id, scrambler_count, first_place, last_place, groups, scrambling_run_id, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, competitor_information, round_counter):
     ranking, event_ranking = [], []
     loop_counter = 1
 
@@ -106,22 +106,22 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
     if last_place > max_competitors:
         last_place = max_competitors
     if first_place >= last_place and scrambler_count_list[event] != 0:
-        repeat_selectscrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scramblerlist, round_counter)
-        return (result_string, scramblerlist, event_ids, rowcount)
+        repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, round_counter)
+        return (result_string, scrambler_list, event_ids, rowcount)
 
     # actual determination of scramblers happens here
     for group_number in range(1, groups + 1):
         exists = False
-        for scrambler in range(0, len(scramblerlist)):
-            if scramblerlist[scrambler][0] == round_id  and scramblerlist[scrambler][1] == groups:
-                scramblerlist[scrambler] = [round_id, group_number]
+        for scrambler in range(0, len(scrambler_list)):
+            if scrambler_list[scrambler][0] == round_id  and scrambler_list[scrambler][1] == groups:
+                scrambler_list[scrambler] = [round_id, group_number]
                 exists = True
         if not exists:
-            scramblerlist.append([round_id, group_number])
+            scrambler_list.append([round_id, group_number])
 
-        for scrambler in range(0, len(scramblerlist)):
-            if scramblerlist[scrambler][0] == round_id:  # only finishes after enough scramblers are in list
-                while len(scramblerlist[scrambler]) < (scrambler_count + 2):
+        for scrambler in range(0, len(scrambler_list)):
+            if scrambler_list[scrambler][0] == round_id:  # only finishes after enough scramblers are in list
+                while len(scrambler_list[scrambler]) < (scrambler_count + 2):
                     random.seed()
                     rank = random.randrange(first_place, last_place)
                     not_double = checking(
@@ -129,13 +129,13 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
                             groups, rank, group_number, \
                             round_number, scrambler, first_place, \
                             last_place, scrambling_run_id, result_string, \
-                            competition_count, scramblerlist, competitor_information, \
+                            competition_count, scrambler_list, competitor_information, \
                             round_counter
                             )
                     
                     if not_double:
                         new_scrambler = ftfy.fix_text(ranking[rank][0])
-                        scramblerlist[scrambler].append(new_scrambler)
+                        scrambler_list[scrambler].append(new_scrambler)
 
                     if loop_counter % 10000 == 0:
                         last_place += 5
@@ -143,18 +143,18 @@ def selectscrambler(event, round_number, round_id, scrambler_count, first_place,
                             last_place = max_competitors
                 
                         if loop_counter == 100000:
-                            repeat_selectscrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scramblerlist, competitor_information, round_counter)
+                            repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, rowcount, registration_list, scrambler_list, competitor_information, round_counter)
                             break
                     loop_counter += 1
-    return (result_string, scramblerlist, event_ids, rowcount)
+    return (result_string, scrambler_list, event_ids, rowcount)
 
 # part of the checking process: check if scrambler already scrambles more than average
-def scrambling_average(personId, result_string, scramblerlist):
+def scrambling_average(personId, result_string, scrambler_list):
     scrambling_count_list = ()
     scramble_count_person = 0
     for persons in result_string:
         scramble_count = 0
-        for scrambler in scramblerlist:
+        for scrambler in scrambler_list:
             if persons[0] in scrambler:
                 scramble_count += 1
         if persons[2] == personId:
@@ -185,7 +185,7 @@ def scrambling_average(personId, result_string, scramblerlist):
 
 # - special conditions if in previous run not enough scramblers were found (scrambling_run_id == 2):
 # - competitor does not compete in event (i.e. persons from 3x3x3 get selected for 3x3x3 Blindfolded)
-def checking(ranking, event_ids, event, groups, rank, group_number, round_number, scrambler, first_place, last_place, scrambling_run_id, result_string, competition_count, scramblerlist, competitor_information, round_counter):
+def checking(ranking, event_ids, event, groups, rank, group_number, round_number, scrambler, first_place, last_place, scrambling_run_id, result_string, competition_count, scrambler_list, competitor_information, round_counter):
     if scrambling_run_id == 2:
         previous_event = event
         event = event[:3]
@@ -193,8 +193,8 @@ def checking(ranking, event_ids, event, groups, rank, group_number, round_number
     if ranking[rank][2] == 99999:
         return 0
     # is not already scrambler for same group
-    for scrambling_place in range(2, len(scramblerlist[scrambler])):
-        if ftfy.fix_text(ranking[rank][0]) == ftfy.fix_text(scramblerlist[scrambler][scrambling_place]):
+    for scrambling_place in range(2, len(scrambler_list[scrambler])):
+        if ftfy.fix_text(ranking[rank][0]) == ftfy.fix_text(scrambler_list[scrambler][scrambling_place]):
             return 0
     # has more than 5 comps
     for counts in competition_count:
@@ -237,7 +237,7 @@ def checking(ranking, event_ids, event, groups, rank, group_number, round_number
             if person[event_ids[event]] == str(group_number) and round_number in (1, round_counter[event]):
                 return 0
     # scrambles more than average + x
-    average = scrambling_average(ranking[rank][1], result_string, scramblerlist)
+    average = scrambling_average(ranking[rank][1], result_string, scrambler_list)
     if average[0] > (average[1] + 1.5):
         return 0
     return 1
@@ -256,7 +256,7 @@ def get_result(person, results_event):
 def run_grouping_and_scrambling(group_list, result_string, registration_list, column_ids, ranking_single, competition_count, event_ids, event_ids_wca, competitor_information, round_counter):
     previous_event = ''
     scrambler_count_list = {}
-    scramblerlist = []
+    scrambler_list = []
     rowcount = 3
     
     # definition of # scramblers per event
@@ -293,24 +293,25 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
             if top_scrambler < min_scrambler:
                 top_scrambler = competitors_in_event
         
-        result_string, scramblerlist, event_ids, rowcount = selectscrambler(
+        result_string, scrambler_list, event_ids, rowcount = select_scrambler(
                 event, round_number, round_name, \
                 scrambler_count_list[event], min_scrambler, \
                 top_scrambler, groups, 1, \
                 result_string, ranking_single, competition_count, \
                 event_ids, event_ids_wca, column_ids, \
-                rowcount, registration_list, scramblerlist, \
+                rowcount, registration_list, scrambler_list, \
                 competitor_information, round_counter
                 )
         previous_event = event
         advancing_competitors = rounds[3]
         previous_competitors_in_event = competitors_in_event
-    return (result_string, scramblerlist)
+    return (result_string, scrambler_list)
 
 def get_event_round_information(event_rounds):
     return (event_rounds[0], event_rounds[1], int(event_rounds[1][-1:]), event_rounds[2])
 
 def update_event_ids(group_list, event_ids):
+    rowcount = 3
     for event_rounds in group_list:
         event, round_name, round_number, groups = get_event_round_information(event_rounds)
         advancing_competitors = event_rounds[3]
@@ -319,11 +320,11 @@ def update_event_ids(group_list, event_ids):
             rowcount += 1
     return (event_ids, rowcount)
 
-def sort_scrambler_by_schedule(full_schedule, scramblerlist, round_counter):
-    scramblerlist_sorted_by_schedule = []
+def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
+    scrambler_list_sorted_by_schedule = []
     for schedule_event in full_schedule:
         if schedule_event['round_number']:
-            for event_scrambler in scramblerlist:
+            for event_scrambler in scrambler_list:
                 if schedule_event['event_name'] == event_scrambler[0]:
                     round_name = event_scrambler[0]
                     replace_string = ' Round {}'.format(event_scrambler[0][-1:])
@@ -333,8 +334,8 @@ def sort_scrambler_by_schedule(full_schedule, scramblerlist, round_counter):
                         round_name = round_name.replace(replace_string, ' Final')
                     event_scrambler[0] = round_name
                     
-                    scramblerlist_sorted_by_schedule.append(event_scrambler)
-    return scramblerlist_sorted_by_schedule
+                    scrambler_list_sorted_by_schedule.append(event_scrambler)
+    return scrambler_list_sorted_by_schedule
 
 def get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags, cur):
     if not create_only_nametags:

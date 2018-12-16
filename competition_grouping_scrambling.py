@@ -7,7 +7,7 @@ from db import WCA_Database
 from wca_registration import wca_registration_system, get_file_name, competition_information_fetch, wca_registration, get_wca_info, get_information, get_competitor_information_from_cubecomps, get_round_information_from_cubecomps
 from information_analysis import column_ids, formats, format_names, get_registration_from_file, get_registrations_from_wcif, get_events_from_wcif, get_schedule_from_wcif
 from grouping_scrambling_functions import run_grouping_and_scrambling, update_event_ids, sort_scrambler_by_schedule, get_results_from_wca_export
-from pdf_file_generation import create_blank_sheets, create_scoresheets, create_scoresheets_second_rounds, create_registration_file, create_schedule_file, create_nametag_file, create_scrambling_file, create_grouping_file
+from pdf_file_generation import create_blank_sheets, create_scoresheets, create_scoresheets_second_rounds, create_registration_file, create_schedule_file, create_nametag_file, create_scrambling_file, create_grouping_file, get_grouping_from_file
 from error_messages import ErrorMessages
 
 # collection of booleans and variables for various different options from this script
@@ -32,7 +32,7 @@ event_ids = {
         'clock': 999, 'skewb': 999, 'sq1': 999, '444bf': 999,
         '555bf': 999, '333mbf': 999
         }
-scramblerlist, result_string = [], []
+scrambler_list, result_string = [], []
 
 ### Selection of script functions
 while True:
@@ -222,7 +222,7 @@ if get_registration_information:
 
     ########## SCHEDULE ##########
     # get schedule information from wca website
-    # used for sorting of scramblerlist + creating a PDF containing the schedule
+    # used for sorting of scrambler_list + creating a PDF containing the schedule
     full_schedule, competition_days, competition_start_day, timezone_utc_offset, events_per_day = get_schedule_from_wcif(wca_json)
 
     if wca_info and not create_only_schedule:
@@ -382,13 +382,13 @@ if create_registration_file_bool:
 ### Create blank scoresheets if wanted
 if blank_sheets:
     print('Creating blank sheets...')
-    create_blank_sheets(write_blank_sheets, competition_name, scrambler_signature, blank_sheets_round_name)
+    create_blank_sheets(competition_name, scrambler_signature, blank_sheets_round_name)
 
 ### Create scoresheets for consecutive rounds and exit script
 if create_scoresheets_second_rounds_bool:
     print('Creating scoresheets for {} ...'.format(event_round_name))
     create_scoresheets_second_rounds(
-            write_scoresheets_second_round, competition_name, competitor_information, \
+            competition_name, competitor_information, \
             advancing_competitors_next_round, event_round_name, event_info, \
             event_2, next_round_name, event, scrambler_signature \
             )
@@ -431,33 +431,33 @@ if new_creation or create_only_nametags:
         competitor_information, ranking_single, competition_count = get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags, cur)
 
 if reading_grouping_from_file:
-    event_ids, rowcount = update_event_ids(group_list)
+    event_ids, rowcount = update_event_ids(group_list, event_ids)
 
 if new_creation:
     print('')
     print('Running grouping and scrambling...')
-    result_string, scramblerlist = run_grouping_and_scrambling(group_list, result_string, registration_list, column_ids, ranking_single, competition_count, event_ids, event_ids_wca, competitor_information, round_counter)
+    result_string, scrambler_list = run_grouping_and_scrambling(group_list, result_string, registration_list, column_ids, ranking_single, competition_count, event_ids, event_ids_wca, competitor_information, round_counter)
 
     # Add dummy columns for events with < 5 scramblers
-    for scrambler_id in range(0, len(scramblerlist)):
-        while len(scramblerlist[scrambler_id]) < 7:
-            scramblerlist[scrambler_id].append('dummy name')
+    for scrambler_id in range(0, len(scrambler_list)):
+        while len(scrambler_list[scrambler_id]) < 7:
+            scrambler_list[scrambler_id].append('dummy name')
 
-    scramblerlist_sorted_by_schedule = sort_scrambler_by_schedule(full_schedule, scramblerlist, round_counter)
+    scrambler_list_sorted_by_schedule = sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter)
 
-    if scramblerlist_sorted_by_schedule:
-        scramblerlist = scramblerlist_sorted_by_schedule
+    if scrambler_list_sorted_by_schedule:
+        scrambler_list = scrambler_list_sorted_by_schedule
         
     print('Grouping and scrambling done.')
 
 if reading_scrambling_list_from_file: 
     with open(scrambling_file_name, 'r', encoding='utf8') as f:
         reader = csv.reader(f)
-        scramblerlist = list(reader)
-    del scramblerlist[0:2]
+        scrambler_list = list(reader)
+    del scrambler_list[0:2]
 
-    for person in range(0, len(scramblerlist)):
-        scramblerlist[person][1] = int(scramblerlist[person][1])
+    for person in range(0, len(scrambler_list)):
+        scrambler_list[person][1] = int(scrambler_list[person][1])
         
 ### Save results to files
 if new_creation or blank_sheets or create_only_nametags:
@@ -470,16 +470,15 @@ if new_creation or blank_sheets or create_only_nametags:
     sheet = create_nametag_file(
             competitor_information, competition_name, competition_name_stripped, \
             two_sided_nametags, create_only_nametags, result_string, \
-            event_ids, scramblerlist, event_dict, \
-            only_one_competitor, round_counter, group_list, \
-            scoresheet_competitor_name
+            event_ids, scrambler_list, event_dict, \
+            round_counter, group_list
             )
 
     print('')
     print('Create scrambling and grouping file...')
 
     # grouping and scrambling file
-    create_scrambling_file(output_scrambling, competition_name, scramblerlist)
+    create_scrambling_file(output_scrambling, competition_name, scrambler_list)
     create_grouping_file(output_grouping, event_ids, event_dict, result_string)
 
     print('Scrambling and grouping successfully saved. Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
