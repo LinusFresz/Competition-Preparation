@@ -3,6 +3,8 @@ Multiple functions to log in on the WCA website and catch all necessary competit
 '''
 
 from modules import *
+from static import config as credentials
+#from static/config import mail_address, password, competition_name_input
 
 ### Error handling for WCA website login errors
 def error_handling_wcif(competition_name, competition_page):
@@ -72,7 +74,10 @@ def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags
 
 def wca_registration(new_creation):
     while True:
-        wca_mail = input('Your WCA mail address: ')
+        try:
+            wca_mail = credentials.mail_address
+        except:
+            wca_mail = input('Your WCA mail address: ')
         if '@' not in wca_mail:
             if wca_mail[:4].isdigit() and wca_mail[8:].isdigit():
                 print('Please enter your WCA account email address instead of WCA ID.')
@@ -80,10 +85,16 @@ def wca_registration(new_creation):
                 print('Please enter valid email address.')
         else:
             break
-    wca_password = getpass.getpass('Your WCA password: ')
+    try:
+        wca_password = credentials.password
+    except:
+        wca_password = getpass.getpass('Your WCA password: ')
     
     if new_creation:
-        competition_name = input('Competition name: ')
+        try:
+            competition_name = credentials.competition_name_input
+        except:
+            competition_name = input('Competition name: ')
         create_competition_folder(competition_name)
         competition_name_stripped = competition_name.replace(' ', '')
         return (wca_password, wca_mail, competition_name, competition_name_stripped)
