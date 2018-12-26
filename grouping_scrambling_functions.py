@@ -347,16 +347,12 @@ def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
                     scrambler_list_sorted_by_schedule.append(event_scrambler)
     return scrambler_list_sorted_by_schedule
 
-def get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags, sql_cursor):
+def get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags):
     if not create_only_nametags:
-        sql_cursor.execute("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,))
-        ranking_single = sql_cursor.fetchall()
-    sql_cursor.execute("SELECT res.personId, companzahl FROM Results AS res INNER JOIN (SELECT r.personId, COUNT(DISTINCT r.competitionId) AS companzahl FROM Results AS r WHERE r.personId IN %s GROUP BY r.personId) x ON res.personId = x.personId WHERE res.personId IN %s GROUP BY res.personId", (wca_ids, wca_ids))
-    competition_count = sql_cursor.fetchall()
-    sql_cursor.execute("SELECT * FROM RanksSingle WHERE eventId = '333' and personId in %s", (wca_ids,))
-    single = sql_cursor.fetchall()
-    sql_cursor.execute("SELECT * FROM RanksAverage WHERE eventId = '333' and personId in %s", (wca_ids,))
-    average = sql_cursor.fetchall()
+        ranking_single = WCA_Database.query("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,)).fetchall()
+    competition_count = WCA_Database.query("SELECT res.personId, companzahl FROM Results AS res INNER JOIN (SELECT r.personId, COUNT(DISTINCT r.competitionId) AS companzahl FROM Results AS r WHERE r.personId IN %s GROUP BY r.personId) x ON res.personId = x.personId WHERE res.personId IN %s GROUP BY res.personId", (wca_ids, wca_ids)).fetchall()
+    single = WCA_Database.query("SELECT * FROM RanksSingle WHERE eventId = '333' and personId in %s", (wca_ids,)).fetchall()
+    average = WCA_Database.query("SELECT * FROM RanksAverage WHERE eventId = '333' and personId in %s", (wca_ids,)).fetchall()
 
     for person in competitor_information:
         single_result = get_result(person, single)

@@ -3,7 +3,6 @@
 '''
 
 from modules import *
-from db import WCA_Database
 from helpers import initiate_result_string, update_scrambler_list
 from wca_registration import wca_registration_system, get_file_name, competition_information_fetch, wca_registration, get_wca_info, get_information, get_competitor_information_from_cubecomps, get_round_information_from_cubecomps
 from information_analysis import column_ids, formats, format_names, get_registration_from_file, get_registrations_from_wcif, get_events_from_wcif, get_schedule_from_wcif, get_events_per_day, get_competitor_events_per_day, prepare_registration_for_competitors
@@ -201,11 +200,11 @@ elif create_scoresheets_second_rounds_bool:
 
     competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
-sql_cursor = WCA_Database.query("SELECT * FROM Countries")
+#sql_cursor = WCA_Database.query("SELECT * FROM Countries")
 
 if get_registration_information:
-    countries = sql_cursor.fetchall()
-
+    countries = WCA_Database.query("SELECT * FROM Countries").fetchall()
+    
     # Extract data from WCIF file
     wca_json = json.loads(competition_wcif_file)
     
@@ -357,7 +356,7 @@ if create_only_nametags:
 if new_creation or create_only_nametags:
     if wca_ids and event_list:
         print('Get necessary results from WCA Export, this may take a few seconds...')
-        competitor_information, ranking_single, competition_count = get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags, sql_cursor)
+        competitor_information, ranking_single, competition_count = get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags)
 
 if reading_grouping_from_file:
     event_ids = update_event_ids(group_list, event_ids)
