@@ -1,5 +1,6 @@
+### Lots of functions that do the actual grouping and scrambling in this script
+
 from modules import *
-from error_messages import ErrorMessages
 
 events_ranking_by_speed = (
         '222', '333', '444',
@@ -7,19 +8,15 @@ events_ranking_by_speed = (
         'pyram', 'skewb'
         )
 
-def competitors_per_event(grouping_list, event_column):
-    event_count = 0
-    for grouping_id in grouping_list:
-        if grouping_id[event_column] == '1':
-            event_count += 1
-    return event_count
-
 ### Grouping for all events with given number of groups
+# Grouping is done by ranking for all events in events_ranking_by_speed
+# All other events use competitors ordered by last name
 def grouping(registration_list, result_string, groups, event_column, event, ranking):
     event_count = competitors_per_event(registration_list, event_column)
     grouping_ranking = registration_list
     result_string_old = result_string
 
+    # Rank competitors by speed for given set of events
     if event in events_ranking_by_speed:
         grouping_ranking, result_string = [], []
         for persons in ranking:
@@ -30,7 +27,7 @@ def grouping(registration_list, result_string, groups, event_column, event, rank
                     result_string.insert(0, result_string_old[competitor])
                     break
 
-    group_size = round(event_count / groups, 0)  # average number of competitors per group
+    group_size = round(event_count / groups, 0)  # Average number of competitors per group
     actual_group_size = 1
     group_number, counter = 0, 0
     for person in range(0, len(grouping_ranking)):
@@ -39,16 +36,24 @@ def grouping(registration_list, result_string, groups, event_column, event, rank
                 group_number += 1
                 if group_number > groups:
                     group_number -= 1
-            result_string[counter] += (str(group_number),)  # adding group number for competitors
+            result_string[counter] += (str(group_number),)  # Adding group number for competitors
             actual_group_size += 1
         else:
-            result_string[counter] += ('',)  # leaving group empty if competitor doesn't compete
+            result_string[counter] += ('',)  # Leaving group empty if competitor doesn't compete
         counter += 1
     
     result_string = sorted(sorted(result_string, key=lambda x: x[0]), key=lambda x:x[0].split()[-1])
     return result_string
 
-### Collect all rankings from SQL-string for choosen event
+# Return number of competitors for given event
+def competitors_per_event(grouping_list, event_column):
+    event_count = 0
+    for grouping_id in grouping_list:
+        if grouping_id[event_column] == '1':
+            event_count += 1
+    return event_count
+
+### Collect all rankings from SQL-List for choosen event
 def get_event_results(event_ranking, ranking_single, event):
     for ranked_competitor in ranking_single:
         if event == ranked_competitor['eventId']:
@@ -68,29 +73,18 @@ def rankings(event_ranking, registration_list, ranking, event, event_column, ran
         if not has_ranking:
             ranking[person] += (99999,)
 
-def repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter):
-    error_string = 'ERROR!! Not enough scramblers found for {}'.format(round_id)
-    if group_number > 1:
-        error_string = ''.join([error_string, ', Group {} of {} groups'.format(str(group_number), groups)])
-    error_string_id = 'no_scramblers_{}'.format(event)
-    if event[0].isdigit() and len(event) > 3 and event != '333mbf' and event[:3] in event_ids_wca:
-        error_string = ''.join([error_string, ', replaced with competitors from {}.'.format(round_id[:5])])
-        select_scrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
-        found_scrambler = True
-    ErrorMessages.messages.update({error_string_id: error_string})
-
-### Select scramblers for each group and creates grouping
+### Create grouping and select scramblers for each group
 def select_scrambler(event, round_number, round_id, scrambler_count, first_place, last_place, groups, scrambling_run_id, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter):
     ranking, event_ranking = [], []
     loop_counter = 1
 
-    # add correct columnid for events AND create grouping for first rounds
+    # Add correct columnid for events AND create grouping for first rounds
     if round_number == 1:
         if scrambling_run_id == 1:
             event_ids.update({event: row_count})
             row_count += 1
 
-    # create ranking for event
+    # Create ranking for event
     for person in registration_list:
         ranking.append((person[1], person[3]))
     
@@ -109,7 +103,7 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
         repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, round_counter)
         return (result_string, scrambler_list, event_ids, row_count)
 
-    # actual determination of scramblers happens here
+    # Actual determination of scramblers happens here
     for group_number in range(1, groups + 1):
         exists = False
         for scrambler in range(0, len(scrambler_list)):
@@ -120,7 +114,7 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
             scrambler_list.append([round_id, group_number])
 
         for scrambler in range(0, len(scrambler_list)):
-            if scrambler_list[scrambler][0] == round_id:  # only finishes after enough scramblers are in list
+            if scrambler_list[scrambler][0] == round_id:  # Only finishes after enough scramblers are in scrambling list for this group
                 while len(scrambler_list[scrambler]) < (scrambler_count + 2):
                     random.seed()
                     rank = random.randrange(first_place, last_place)
@@ -148,7 +142,94 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
                     loop_counter += 1
     return (result_string, scrambler_list, event_ids, row_count)
 
-# part of the checking process: check if scrambler already scrambles more than average
+### If not enough scramblers were found, use similar events to determine scramblers
+# e.g. use competitors from 333 if not enough scramblers were found for 333bf, 333ft etc.
+def repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter):
+    error_string = 'ERROR!! Not enough scramblers found for {}'.format(round_id)
+    if group_number > 1:
+        error_string = ''.join([error_string, ', Group {} of {} groups'.format(str(group_number), groups)])
+    error_string_id = 'no_scramblers_{}'.format(event)
+    if event[0].isdigit() and len(event) > 3 and event != '333mbf' and event[:3] in event_ids_wca:
+        error_string = ''.join([error_string, ', replaced with competitors from {}.'.format(round_id[:5])])
+        select_scrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
+        found_scrambler = True
+    ErrorMessages.messages.update({error_string_id: error_string})
+
+### Check if scrambler can be used
+# Conditions that a scrambler can NOT be selected:
+# - is in same group
+# - has no official result in this event
+# - is already scrambler for this group
+# - competitor has 5 or more competitions
+# - person is organizer or delegate
+# - competitor already scrambles a lot which is defined by function scrambling_average(): if the competitor scrambles more than (average + 2) he won't be selected this time
+
+# extra conditions for second and third rounds with more than one group:
+# - use fast scramblers for first groups (with slower people) and slow scramblers for last groups (faster people)
+
+# extra conditions for finals with only one group:
+# - scrambler is in topX of this event
+
+# - special conditions if in previous run not enough scramblers were found (scrambling_run_id == 2):
+# - competitor does not compete in event (i.e. persons from 3x3x3 get selected for 3x3x3 Blindfolded)
+def checking(ranking, event_ids, event, groups, rank, group_number, round_number, scrambler, first_place, last_place, scrambling_run_id, result_string, competition_count, scrambler_list, competitor_information, round_counter):
+    if scrambling_run_id == 2:
+        previous_event = event
+        event = event[:3]
+    # Has result in event
+    if ranking[rank][2] == 99999:
+        return 0
+    # Is not already scrambler for same group
+    for scrambling_place in range(2, len(scrambler_list[scrambler])):
+        if ftfy.fix_text(ranking[rank][0]) == ftfy.fix_text(scrambler_list[scrambler][scrambling_place]):
+            return 0
+    # Has more than 5 comps
+    for counts in competition_count:
+        if ranking[rank][1] == counts['personId']:
+            if counts['companzahl'] < 5:
+                return 0
+    # For consecutive rounds
+    if round_number != 1:
+        if groups == 1:
+            if rank not in range(first_place, last_place):
+                return 0
+        else:
+            if group_number == 1:
+                if rank >= round(0.8 * last_place / groups, 0):
+                    return 0
+            elif group_number == groups:
+                if rank < round(1.2 * last_place / groups, 0):
+                    return 0
+            elif group_number > 1 and group_number < groups:
+                if rank < round(1.1 * group_number * last_place / groups, 0) and rank > round(0.9 * (group_number - 1) * last_place / groups, 0):
+                    return 0
+    # Is neither organizer nor delegate of competition
+    for person in competitor_information:
+        if ranking[rank][1] == person['personId']:
+            for role in ('organizer', 'delegate'):
+                if role.upper() in person['role']:
+                    return 0
+    for person in result_string:
+        if person[2] == ranking[rank][1]:
+            # Does not compete in sub-events (e.g. 3x3x3 for 3x3x3 blindfolded)
+            if scrambling_run_id == 2:
+                if person[event_ids[previous_event]]:
+                    return 0
+                else:
+                    return 1
+            # Is not registered for event
+            if not person[event_ids[event]]:
+                return 0
+            # Is in same group he should scramble
+            if person[event_ids[event]] == str(group_number) and round_number in (1, round_counter[event]):
+                return 0
+    # Scrambles more than average + x
+    average = scrambling_average(ranking[rank][1], result_string, scrambler_list)
+    if average[0] > (average[1] + 1.5):
+        return 0
+    return 1
+
+# Part of the checking process: check if scrambler does already scramble more than average
 def scrambling_average(personId, result_string, scrambler_list):
     scrambling_count_list = ()
     scramble_count_person = 0
@@ -168,98 +249,14 @@ def scrambling_average(personId, result_string, scrambler_list):
         average_scrambling = 0
     return scramble_count_person, average_scrambling
 
-### Check if scrambler can be used
-# conditions so that scrambler can NOT be selected:
-# - is in same group
-# - has no official result in this event
-# - is already scrambler for this group
-# - competitor has 5 or more competitions
-# - person is organizer or delegate
-# - competitor already scrambles a lot which is defined by function scrambling_average(): if the competitor scrambles more than (average + 2) he won't be selected this time
-
-# extra conditions for second and third rounds with more than one group:
-# - use fast scramblers for first groups (with slower people) and slow scramblers for last groups (faster people)
-
-# extra conditions for finals with only one group:
-# - scrambler is in top16 of this event
-
-# - special conditions if in previous run not enough scramblers were found (scrambling_run_id == 2):
-# - competitor does not compete in event (i.e. persons from 3x3x3 get selected for 3x3x3 Blindfolded)
-def checking(ranking, event_ids, event, groups, rank, group_number, round_number, scrambler, first_place, last_place, scrambling_run_id, result_string, competition_count, scrambler_list, competitor_information, round_counter):
-    if scrambling_run_id == 2:
-        previous_event = event
-        event = event[:3]
-    # has result in event
-    if ranking[rank][2] == 99999:
-        return 0
-    # is not already scrambler for same group
-    for scrambling_place in range(2, len(scrambler_list[scrambler])):
-        if ftfy.fix_text(ranking[rank][0]) == ftfy.fix_text(scrambler_list[scrambler][scrambling_place]):
-            return 0
-    # has more than 5 comps
-    for counts in competition_count:
-        if ranking[rank][1] == counts['personId']:
-            if counts['companzahl'] < 5:
-                return 0
-    # for consecutive rounds
-    if round_number != 1:
-        if groups == 1:
-            if rank not in range(first_place, last_place):
-                return 0
-        else:
-            if group_number == 1:
-                if rank >= round(0.8 * last_place / groups, 0):
-                    return 0
-            elif group_number == groups:
-                if rank < round(1.2 * last_place / groups, 0):
-                    return 0
-            elif group_number > 1 and group_number < groups:
-                if rank < round(1.1 * group_number * last_place / groups, 0) and rank > round(0.9 * (group_number - 1) * last_place / groups, 0):
-                    return 0
-    # is neither organizer nor delegate of competition
-    for person in competitor_information:
-        if ranking[rank][1] == person['personId']:
-            for role in ('organizer', 'delegate'):
-                if role.upper() in person['role']:
-                    return 0
-    for person in result_string:
-        if person[2] == ranking[rank][1]:
-            # does not compete in sub-events (e.g. 3x3x3 for 3x3x3 blindfolded)
-            if scrambling_run_id == 2:
-                if person[event_ids[previous_event]]:
-                    return 0
-                else:
-                    return 1
-            # is not registered for event
-            if not person[event_ids[event]]:
-                return 0
-            # is in same group he should scramble
-            if person[event_ids[event]] == str(group_number) and round_number in (1, round_counter[event]):
-                return 0
-    # scrambles more than average + x
-    average = scrambling_average(ranking[rank][1], result_string, scrambler_list)
-    if average[0] > (average[1] + 1.5):
-        return 0
-    return 1
-
-def get_result(person, results_event):
-    result = '0.00'
-    for id in results_event:
-        if person['personId'] == id['personId']:
-            result = str(round(id['best'] / 100, 2))
-
-    while len(result.split('.')[1]) < 2:
-        result = ''.join([result, '0'])
-    return result
-
-### Create scrambling and Grouping
+### Create grouping and scrambling for all events of competition
 def run_grouping_and_scrambling(group_list, result_string, registration_list, column_ids, ranking_single, competition_count, event_ids, event_ids_wca, competitor_information, round_counter):
     previous_event = ''
     scrambler_count_list = {}
     scrambler_list = []
     row_count = 3
     
-    # definition of # scramblers per event
+    # Hard coded definition of number of scramblers per event
     for event in ('333fm', '333mbf'):
         scrambler_count_list.update({event: 0})
     for event in ('333bf', '333ft', '444bf', '555bf'):
@@ -307,9 +304,11 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
         previous_competitors_in_event = competitors_in_event
     return (result_string, scrambler_list)
 
+# Return event name, round name, round number and number of groups for given event
 def get_event_round_information(event_rounds):
     return (event_rounds[0], event_rounds[1], int(event_rounds[1][-1:]), event_rounds[2])
 
+# Update event index for given event
 def update_event_ids(group_list, event_ids):
     row_count = 3
     for event_rounds in group_list:
@@ -319,7 +318,8 @@ def update_event_ids(group_list, event_ids):
             event_ids.update({event: row_count})
             row_count += 1
     return (event_ids)
-    
+
+# Update column index for given event
 def update_column_ids(event_list_wca, column_ids):
     event_list = ()
     counter = 0
@@ -330,6 +330,7 @@ def update_column_ids(event_list_wca, column_ids):
             counter += 1
     return(column_ids, event_list)
 
+### If schedule is given, sort scrambling list by this schedule to give it a nice format
 def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
     scrambler_list_sorted_by_schedule = []
     for schedule_event in full_schedule:
@@ -347,6 +348,7 @@ def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
                     scrambler_list_sorted_by_schedule.append(event_scrambler)
     return scrambler_list_sorted_by_schedule
 
+### Use WCA ids of competitors to get their best results for all events of the competition + 333 single and average
 def get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags):
     if not create_only_nametags:
         ranking_single = WCA_Database.query("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,)).fetchall()
@@ -365,3 +367,15 @@ def get_results_from_wca_export(event_list, wca_ids, competitor_information, cre
                 break
         person.update({'comp_count': comp_count, 'single': single_result, 'average': average_result})
     return (competitor_information, ranking_single, competition_count)
+
+# Get a specific result
+def get_result(person, results_event):
+    result = '0.00'
+    for id in results_event:
+        if person['personId'] == id['personId']:
+            result = str(round(id['best'] / 100, 2))
+            break
+
+    while len(result.split('.')[1]) < 2:
+        result = ''.join([result, '0'])
+    return result

@@ -1,12 +1,11 @@
-########
-# Data extraction of WCIF and registration file (if used).
+### Data extraction of WCIF and registration file (if used).
 
 import pytz
 import datetime
 import ftfy
 import calendar
 import collections
-from pdf_file_generation import format_minutes_and_seconds
+from helpers.helpers import format_minutes_and_seconds
 
 # initialize various variables for parsing and analysis
 registration_list, competitor_information = [], []
@@ -25,6 +24,7 @@ format_names = {
         'Best of 1', 'mo3': 'Mean of 3', 'ao5': 'Average of 5'
         }
 
+### Get registration from file if WCA registration is not used
 def get_registration_from_file(file_name, new_creation, reading_grouping_from_file, use_csv_registration_file, column_ids, event_counter, competitor_information_wca, competitors):
     file = open(file_name)
     all_data = []
@@ -99,58 +99,40 @@ def get_registration_from_file(file_name, new_creation, reading_grouping_from_fi
             line_count += 1
     return (column_ids, event_list, event_counter, competitor_information, all_data, wca_ids)
 
-def prepare_registration_for_competitors(competitor_information, event_list_wca, number_events):        
-    registration_index = 0
-    wca_ids = ()
-    registration_list_wca = []
-    
-    for person in competitor_information:
-        event_string = [
-                person['guests'],
-                ftfy.fix_text(person['name']),
-                person['country'],
-                person['personId'],
-                person['dob'],
-                person['gender']
-                ]
-        if person['personId']:
-            wca_ids += (person['personId'],)
-        for index in range(0, number_events):
-            event_string.append('0')
-        registration_list_wca.append(event_string)
+### Read in grouping file if needed for nametags/scoresheets
+def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name):
+    result_string = []
+    with open(grouping_file_name, 'r', encoding='utf8') as f:
+        reader = csv.reader(f)
+        file_information = list(reader)
+    counter = 1
+    for events in file_information[0]:
+        if counter > 2:
+            event_short = list(event_dict.keys())[list(event_dict.values()).index(events)]
+            if event_short in event_ids:
+                event_ids.update({event_short: counter})
+        counter += 1
+    grouping_competitor = ''
+    for person in range(0, len(file_information)):
+        if file_information[person][0] and 'Name' not in file_information[person][1]:
+            file_information[person][0] = file_information[person][1]
+            file_information[person].insert(2, '')
+            result_string.append(file_information[person])
+            if only_one_competitor:
+                if ftfy.fix_text(scoresheet_competitor_name) == ftfy.fix_text(file_information[person][0]):
+                    grouping_competitor = file_information[person]
+                    break
+    if only_one_competitor:
+        if grouping_competitor:
+            return [grouping_competitor]
+        else:
+            print('')
+            print("ERROR!! Competitor '{}' not found.".format(scoresheet_competitor_name))
+            sys.exit()
+    return result_string
 
-        for event in event_list_wca:
-            if event in person['registered_events']:
-                id = event_list_wca.index(event) + 6
-                registration_list_wca[registration_index][id] = '1'
-        registration_index += 1
-    return (wca_ids, registration_list_wca)
-
-def format_schedule_time(schedule_event_time_utc, timezone_utc_offset):
-    schedule_event_time = '{}T'.format(schedule_event_time_utc.split('T')[0])
-    if (int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
-        schedule_event_time = ''.join(
-                [
-                schedule_event_time, '0', 
-                str(int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-                ]
-            )
-    else:
-        schedule_event_time = ''.join(
-                [
-                schedule_event_time, 
-                str(int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
-                ]
-            )
-    schedule_event_time = ''.join(
-            [
-            schedule_event_time, ':', 
-            schedule_event_time_utc.split('T')[1].split(':')[1], ':', 
-            schedule_event_time_utc.split('T')[1].split(':')[2]
-            ]
-        )
-    return schedule_event_time
-
+### WCA WCIF
+# Get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for
 def get_registrations_from_wcif(wca_json, countries, create_scoresheets_second_rounds_bool, use_cubecomps_ids, competitors, competitors_api):
     registration_id = 1   
     all_events = () 
@@ -212,6 +194,7 @@ def get_registrations_from_wcif(wca_json, countries, create_scoresheets_second_r
     event_list_wca = sorted(collections.Counter(all_events))
     return (competitor_information_wca, event_list_wca)
 
+# Parse information about event_id, round_number, # groups, format, cutoff, time limit and (possible) cumulative limits for each event
 def get_events_from_wcif(wca_json, event_dict):
     minimal_scramble_set_count = 1
     event_counter_wca = 0
@@ -272,7 +255,9 @@ def get_events_from_wcif(wca_json, event_dict):
                 minimal_scramble_set_count = wca_rounds['scrambleSetCount'] 
     round_counter = collections.Counter(event_ids_wca)
     return (event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count, round_counter)
-    
+
+# Get schedule information from WCIF
+# Used for sorting of scrambler_list + creating a PDF containing the schedule
 def get_schedule_from_wcif(wca_json):
     full_schedule, events_per_day, competing_day = [], [], []
     if wca_json['schedule']['venues']:   
@@ -309,6 +294,7 @@ def get_schedule_from_wcif(wca_json):
         print('No schedule found on WCA website.')
     return (full_schedule, competition_days, competition_start_day, timezone_utc_offset, events_per_day)
 
+# Group events by days to determin the competing days of each competitor
 def get_events_per_day(schedule_event, events_per_day):
     day_exists = False
     event_day = schedule_event['startTime'].split('T')[0]
@@ -351,3 +337,57 @@ def get_competitor_events_per_day(registration_list, column_ids, events_per_day)
         competitor.append(competing_per_day_list)
 
     return registration_list
+
+# Update competitor information and collect all WCA ids
+def prepare_registration_for_competitors(competitor_information, event_list_wca, number_events):
+    registration_index = 0
+    wca_ids = ()
+    registration_list_wca = []
+    
+    for person in competitor_information:
+        event_string = [
+                person['guests'],
+                ftfy.fix_text(person['name']),
+                person['country'],
+                person['personId'],
+                person['dob'],
+                person['gender']
+                ]
+        if person['personId']:
+            wca_ids += (person['personId'],)
+        for index in range(0, number_events):
+            event_string.append('0')
+        registration_list_wca.append(event_string)
+
+        for event in event_list_wca:
+            if event in person['registered_events']:
+                id = event_list_wca.index(event) + 6
+                registration_list_wca[registration_index][id] = '1'
+        registration_index += 1
+    return (wca_ids, registration_list_wca)
+
+# Return useful format of the schedule times
+def format_schedule_time(schedule_event_time_utc, timezone_utc_offset):
+    schedule_event_time = '{}T'.format(schedule_event_time_utc.split('T')[0])
+    if (int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset) < 10:
+        schedule_event_time = ''.join(
+                [
+                schedule_event_time, '0',
+                str(int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
+                ]
+            )
+    else:
+        schedule_event_time = ''.join(
+                [
+                schedule_event_time,
+                str(int(schedule_event_time_utc.split('T')[1].split(':')[0]) + timezone_utc_offset)
+                ]
+            )
+    schedule_event_time = ''.join(
+            [
+            schedule_event_time, ':',
+            schedule_event_time_utc.split('T')[1].split(':')[1], ':',
+            schedule_event_time_utc.split('T')[1].split(':')[2]
+            ]
+        )
+    return schedule_event_time
