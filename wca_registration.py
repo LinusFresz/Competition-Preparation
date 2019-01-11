@@ -102,7 +102,7 @@ def get_competitor_information_from_cubecomps(cubecomps_id, competition_name):
         print('ERROR! Not a valid cubecomps link, script continues without cubecomps.com information.')
         return ([], False)
 
-    comp_id1 = split_cubecomps_id(cubecomps_id, 1, 0, 1)
+    comp_id = split_cubecomps_id(cubecomps_id, 1, 0, 1)
     cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}'.format(comp_id)
     cubecomps_api = requests.get(cubecomps_api_url).json()
             

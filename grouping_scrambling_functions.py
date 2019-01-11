@@ -100,7 +100,7 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
     if last_place > max_competitors:
         last_place = max_competitors
     if first_place >= last_place and scrambler_count_list[event] != 0:
-        repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, round_counter)
+        repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
         return (result_string, scrambler_list, event_ids, row_count)
 
     # Actual determination of scramblers happens here
@@ -225,7 +225,7 @@ def checking(ranking, event_ids, event, groups, rank, group_number, round_number
                 return 0
     # Scrambles more than average + x
     average = scrambling_average(ranking[rank][1], result_string, scrambler_list)
-    if average[0] > (average[1] + 1.5):
+    if average[0] > (average[1] + 2):
         return 0
     return 1
 
@@ -249,22 +249,24 @@ def scrambling_average(personId, result_string, scrambler_list):
         average_scrambling = 0
     return scramble_count_person, average_scrambling
 
+scrambler_count_list = {}
+for event in ('333fm', '333mbf'):
+    scrambler_count_list.update({event: 0})
+for event in ('333bf', '333ft', '444bf', '555bf'):
+    scrambler_count_list.update({event: 3})
+for event in ('222', '333', '444', '555', '333oh', 'pyram', 'minx', 'skewb', 'sq1'):
+    scrambler_count_list.update({event: 4})
+for event in ('555', '666', '777', 'clock'):
+    scrambler_count_list.update({event: 5})
+
+
 ### Create grouping and scrambling for all events of competition
 def run_grouping_and_scrambling(group_list, result_string, registration_list, column_ids, ranking_single, competition_count, event_ids, event_ids_wca, competitor_information, round_counter):
     previous_event = ''
-    scrambler_count_list = {}
     scrambler_list = []
     row_count = 3
     
     # Hard coded definition of number of scramblers per event
-    for event in ('333fm', '333mbf'):
-        scrambler_count_list.update({event: 0})
-    for event in ('333bf', '333ft', '444bf', '555bf'):
-        scrambler_count_list.update({event: 3})
-    for event in ('222', '333', '444', '555', '333oh', 'pyram', 'minx', 'skewb', 'sq1'):
-        scrambler_count_list.update({event: 4})
-    for event in ('555', '666', '777', 'clock'):
-        scrambler_count_list.update({event: 5})
     for rounds in group_list:
         event, round_name, round_number, groups = get_event_round_information(rounds)
 
