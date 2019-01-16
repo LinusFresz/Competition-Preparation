@@ -93,14 +93,17 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
     else:
         rankings(event_ranking, registration_list, ranking, event, column_ids[event], ranking_single, result_string)
     ranking = sorted(ranking, key=lambda x: x[2])
+
     if round_number == 1 and scrambling_run_id == 1:
         result_string = grouping(registration_list, result_string, groups, column_ids[event], event, ranking)
-    
+
     max_competitors = competitors_per_event(registration_list, column_ids[event])
     if last_place > max_competitors:
         last_place = max_competitors
     if first_place >= last_place and scrambler_count_list[event] != 0:
-        repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
+        found_scrambler = repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
+        if not found_scrambler:
+            scrambler_list.append([round_id, 1])
         return (result_string, scrambler_list, event_ids, row_count)
 
     # Actual determination of scramblers happens here
@@ -145,6 +148,7 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
 ### If not enough scramblers were found, use similar events to determine scramblers
 # e.g. use competitors from 333 if not enough scramblers were found for 333bf, 333ft etc.
 def repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter):
+    found_scrambler = False
     error_string = 'ERROR!! Not enough scramblers found for {}'.format(round_id)
     if group_number > 1:
         error_string = ''.join([error_string, ', Group {} of {} groups'.format(str(group_number), groups)])
@@ -154,6 +158,7 @@ def repeat_select_scrambler(event, round_number, round_id, scrambler_count, grou
         select_scrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
         found_scrambler = True
     ErrorMessages.messages.update({error_string_id: error_string})
+    return found_scrambler
 
 ### Check if scrambler can be used
 # Conditions that a scrambler can NOT be selected:
@@ -269,7 +274,7 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
     # Hard coded definition of number of scramblers per event
     for rounds in group_list:
         event, round_name, round_number, groups = get_event_round_information(rounds)
-
+        
         if round_number == 1:
             competitors_in_event = competitors_per_event(registration_list, column_ids[event])
         else:
@@ -283,7 +288,7 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
             top_scrambler = int(round(0.5 * competitor_count, 0))
             min_scrambler = 0
             if '%' in advancing_competitors:
-                competitors_in_event = int(0.75 * competitors_in_event)
+                competitors_in_event = int(int(advancing_competitors[:-1]) / 100 * competitors_in_event)
         else:
             if advancing_competitors.isdigit():
                 min_scrambler = int(round(int(advancing_competitors) * 1.2, 0))
@@ -291,7 +296,7 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
                 min_scrambler = int(round(0.8 * competitors_in_event, 0))
             if top_scrambler < min_scrambler:
                 top_scrambler = competitors_in_event
-        
+    
         result_string, scrambler_list, event_ids, row_count = select_scrambler(
                 event, round_number, round_name, \
                 scrambler_count_list[event], min_scrambler, \
@@ -304,6 +309,7 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
         previous_event = event
         advancing_competitors = rounds[3]
         previous_competitors_in_event = competitors_in_event
+    
     return (result_string, scrambler_list)
 
 # Return event name, round name, round number and number of groups for given event
