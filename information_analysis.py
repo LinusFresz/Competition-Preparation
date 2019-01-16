@@ -5,6 +5,7 @@ import datetime
 import ftfy
 import calendar
 import collections
+import csv
 from helpers.helpers import format_minutes_and_seconds
 
 # initialize various variables for parsing and analysis

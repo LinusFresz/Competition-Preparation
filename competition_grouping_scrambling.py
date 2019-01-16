@@ -151,6 +151,12 @@ elif reading_grouping_from_file:
     file_name, grouping_file_name = competition_information_fetch(wca_info, True, False, new_creation)
     competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
+    if not create_only_nametags:        
+        print('Please enter cubecomps link to competition: (leave blank if not needed)')
+        cubecomps_id = input()
+    if cubecomps_id:
+        competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
+
 # Create schedule from wca website information
 elif create_only_schedule:
     wca_info = get_information('Use WCA website information? (y/n) ')
