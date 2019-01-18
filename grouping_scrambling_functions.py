@@ -358,6 +358,7 @@ def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
 
 ### Use WCA ids of competitors to get their best results for all events of the competition + 333 single and average
 def get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags):
+    ranking_single = []
     if not create_only_nametags:
         ranking_single = WCA_Database.query("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,)).fetchall()
     competition_count = WCA_Database.query("SELECT res.personId, companzahl FROM Results AS res INNER JOIN (SELECT r.personId, COUNT(DISTINCT r.competitionId) AS companzahl FROM Results AS r WHERE r.personId IN %s GROUP BY r.personId) x ON res.personId = x.personId WHERE res.personId IN %s GROUP BY res.personId", (wca_ids, wca_ids)).fetchall()

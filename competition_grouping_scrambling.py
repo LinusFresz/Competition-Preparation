@@ -246,7 +246,6 @@ if get_registration_information:
         registration_list_wca = sorted(sorted(registration_list_wca, key=lambda x: x[1]), key=lambda x: x[1].split()[-1])
     
         column_ids, event_list = update_column_ids(event_list_wca, column_ids)
-
     if group_list:
         print('WCA information sucessfully imported.')
     else:
@@ -342,7 +341,7 @@ if registration_list:
 ### Check for matching registration and grouping information
 if create_only_nametags:
     if two_sided_nametags:
-        result_string = get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name)
+        result_string, event_ids = get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name)
         new_result_string, new_competitor_information = [], []
         if len(competitor_information) != len(result_string):
             print('')
@@ -354,13 +353,11 @@ if create_only_nametags:
                         new_competitor_information.append(registered_competitor)
                         break
     
-        if len(new_competitor_information) <= len(competitor_information):
+        if len(new_competitor_information) <= len(competitor_information) and len(new_competitor_information) != 0:
             print('Using only information that were found on both platforms.')
             print('')
             competitor_information = new_competitor_information
             result_string = new_result_string
-        else:
-            print('ERROR!!')
 
 ### Selection of necessary information from WCA database export. Information include:
 # - rankings for all events at competition
@@ -370,10 +367,6 @@ if new_creation or create_only_nametags:
     if wca_ids and event_list:
         print('Get necessary results from WCA Export, this may take a few seconds...')
         competitor_information, ranking_single, competition_count = get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags)
-
-# Update columns in event_ids according to information in registration file
-if reading_grouping_from_file:
-    event_ids = update_event_ids(group_list, event_ids)
 
 # Run grouping and scrambling
 if new_creation:

@@ -130,7 +130,7 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
             print('')
             print("ERROR!! Competitor '{}' not found.".format(scoresheet_competitor_name))
             sys.exit()
-    return result_string
+    return (result_string, event_ids)
 
 ### WCA WCIF
 # Get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for

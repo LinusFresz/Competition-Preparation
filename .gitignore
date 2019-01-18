@@ -15,3 +15,5 @@ Trebuchet.ttf
 
 # Ignore generated blank scoresheets
 *_Scoresheets.pdf
+
+*.csv
