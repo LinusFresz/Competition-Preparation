@@ -19,8 +19,8 @@ def update_scrambler_list(scrambler_list):
 # Return minutes and seconds for given amount of seconds
 def format_minutes_and_seconds(time_string):
     minutes, seconds = divmod(time_string, 60)
-    minutes = str(minutes)
-    seconds = enlarge_string(str(seconds), '0', 2)
+    minutes = str(int(minutes))
+    seconds = enlarge_string(str(int(seconds)), '0', 2)
     return (minutes, seconds)
 
 # Add whitespace/other characters to string

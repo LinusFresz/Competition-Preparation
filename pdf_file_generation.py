@@ -486,12 +486,11 @@ def write_schedule(label, width, height, information):
                         seconds_cutoff = str(seconds_cutoff) 
                         seconds_cutoff = enlarge_string(seconds_cutoff, '0', 2)
                         
-                        round_format = '{} (< {}:{}) / '.format(format_names[format_name], minutes_cutoff, seconds_cutoff)    
-                        
+                        round_format = '{} (< {}:{}) / '.format(format_names[format_name], minutes_cutoff, seconds_cutoff)   
                     round_format += format_names[str(events['format'])]
                     
                     if events['advancing']:
-                        round_format = '({} proceed)'.format(events['advancing'])
+                        round_format += ' ({} proceed)'.format(events['advancing'])
             if not 'Attempt' in event['event_name']:
                 round_number = event['event_name'][-1:]
             else:

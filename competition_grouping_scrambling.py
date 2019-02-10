@@ -234,7 +234,7 @@ if get_registration_information:
     full_schedule, competition_days, competition_start_day, timezone_utc_offset, events_per_day = get_schedule_from_wcif(wca_json)
 
     # Evaluate collected information
-    if wca_info and not create_only_schedule:
+    if wca_info: # and not create_only_schedule:
         competitor_information = competitor_information_wca
         
         wca_ids, registration_list_wca = prepare_registration_for_competitors(competitor_information, event_list_wca, len(event_list_wca))
