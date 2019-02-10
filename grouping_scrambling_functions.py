@@ -104,7 +104,7 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
     if last_place > max_competitors:
         last_place = max_competitors
     if first_place >= last_place and scrambler_count_list[event] != 0:
-        found_scrambler = repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
+        found_scrambler = repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, 0, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter, scrambling_run_id)
         if not found_scrambler:
             scrambler_list.append([round_id, 1])
         return (result_string, scrambler_list, event_ids, row_count)
@@ -157,6 +157,7 @@ def repeat_select_scrambler(event, round_number, round_id, scrambler_count, grou
         error_string = ''.join([error_string, ', Group {} of {} groups'.format(str(group_number), groups)])
     error_string_id = 'no_scramblers_{}'.format(event)
     if event[0].isdigit() and len(event) > 3 and event != '333mbf' and event[:3] in event_ids_wca and scrambling_run_id == 1:
+        scrambling_run_id += 1
         error_string = ''.join([error_string, ', replaced with competitors from {}.'.format(round_id[:5])])
         select_scrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
         found_scrambler = True

@@ -102,6 +102,7 @@ if new_creation or create_only_nametags:
             scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
         
             print('Please enter cubecomps link to competition: (leave blank if not needed)')
+            print('If provided, the script will use registration ids from cubecomps for scoresheets. This ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!).')
             cubecomps_id = input()
         if cubecomps_id:
             competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)

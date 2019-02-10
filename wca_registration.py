@@ -73,8 +73,8 @@ def wca_registration(new_creation):
 # https://github.com/thewca/worldcubeassociation.org/wiki/OAuth-documentation-notes
 def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped):
     print('Fetching information from WCA competition website...')
-    url1 = 'https://www.worldcubeassociation.org/oauth/token'
-    url2 = 'https://www.worldcubeassociation.org/api/v0/competitions/' + competition_name_stripped + '/wcif'
+    url1 = 'https://staging.worldcubeassociation.org/oauth/token'
+    url2 = 'https://staging.worldcubeassociation.org/api/v0/competitions/' + competition_name_stripped + '/wcif'
     
     wca_headers = {'grant_type':'password', 'username':wca_mail, 'password':wca_password, 'scope':'public manage_competitions'}
     wca_request_token = requests.post(url1, data=wca_headers)
