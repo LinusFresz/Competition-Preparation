@@ -1,7 +1,6 @@
 ### Multiple functions to log in on the WCA website and catch all necessary competition and competitor registration information
 
 from modules import *
-from static import config as credentials
 
 ### Error handling for WCA website login errors
 def error_handling_wcif(competition_name, competition_page):
@@ -90,6 +89,15 @@ def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stri
     error_handling_wcif(competition_name, competition_wcif_info.text)
     
     return competition_wcif_info.text
+    
+def get_wca_competitor(wca_id):
+    url = 'https://www.worldcubeassociation.org/api/v0/persons/' + wca_id
+    competitor_info = requests.get(url)    
+    try:
+        competitor_info = json.loads(competitor_info.text)
+    except KeyError:
+        print('Competitor ' + wca_id + 'not found.')
+    return competitor_info
 
 ### Cubecomps API
 # API to collect competitor information

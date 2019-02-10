@@ -2,6 +2,9 @@
 
 from modules import *
 
+from wca_registration import get_wca_competitor
+from helpers.helpers import format_result
+
 events_ranking_by_speed = (
         '222', '333', '444',
         '333oh', '333bf', '333ft',
@@ -254,6 +257,7 @@ def scrambling_average(personId, result_string, scrambler_list):
         average_scrambling = 0
     return scramble_count_person, average_scrambling
 
+# Hard coded definition of number of scramblers per event
 scrambler_count_list = {}
 for event in ('333fm', '333mbf'):
     scrambler_count_list.update({event: 0})
@@ -271,8 +275,7 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
     scrambler_list = []
     row_count = 3
     
-    # Hard coded definition of number of scramblers per event
-    for rounds in group_list:
+    for rounds in tqdm.tqdm(group_list):
         event, round_name, round_number, groups = get_event_round_information(rounds)
         
         if round_number == 1:
@@ -357,34 +360,41 @@ def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
     return scrambler_list_sorted_by_schedule
 
 ### Use WCA ids of competitors to get their best results for all events of the competition + 333 single and average
-def get_results_from_wca_export(event_list, wca_ids, competitor_information, create_only_nametags):
+def get_competitor_results_from_wcif(event_list, wca_ids, competitor_information, create_only_nametags, wca_info):
     ranking_single = []
-    if not create_only_nametags:
-        ranking_single = WCA_Database.query("SELECT * FROM RanksSingle WHERE eventId IN %s", (event_list,)).fetchall()
-    competition_count = WCA_Database.query("SELECT res.personId, companzahl FROM Results AS res INNER JOIN (SELECT r.personId, COUNT(DISTINCT r.competitionId) AS companzahl FROM Results AS r WHERE r.personId IN %s GROUP BY r.personId) x ON res.personId = x.personId WHERE res.personId IN %s GROUP BY res.personId", (wca_ids, wca_ids)).fetchall()
-    single = WCA_Database.query("SELECT * FROM RanksSingle WHERE eventId = '333' and personId in %s", (wca_ids,)).fetchall()
-    average = WCA_Database.query("SELECT * FROM RanksAverage WHERE eventId = '333' and personId in %s", (wca_ids,)).fetchall()
+    competition_count = []
 
-    for person in competitor_information:
-        single_result = get_result(person, single)
-        average_result = get_result(person, average)
-
+    for person in tqdm.tqdm(competitor_information):
         comp_count = 0
-        for id in competition_count:
-            if person['personId'] == id['personId']:
-                comp_count = id['companzahl']
-                break
-        person.update({'comp_count': comp_count, 'single': single_result, 'average': average_result})
+        single_result = '0.00'
+        average_result = '0.00'
+        if not wca_info:
+            if person['personId']:
+                wca_api_competitor = get_wca_competitor(person['personId'])
+                comp_count = wca_api_competitor['competition_count']
+                for event_records in wca_api_competitor['personal_records']:
+                    ranking_single.append({'personId': person['personId'], 'eventId': event_records, 'best': wca_api_competitor['personal_records'][event_records]['single']['best']})
+                    # Add 3x3x3 results and competition count to competitor information for nametags
+                    if (event_records == '333'):
+                        try:
+                            single_result = round(wca_api_competitor['personal_records'][event_records]['single']['best'] / 100, 2)
+                            if single_result >= 60:
+                                single = format_result(single_result)
+                        except KeyError:
+                            pass
+                        try:   
+                            average_result = round(wca_api_competitor['personal_records'][event_records]['average']['best'] / 100, 2)
+                            if average_result >= 60:
+                                average_result = format_result(average_result)
+                        except KeyError:
+                            pass
+            person.update({'comp_count': comp_count, 'single': single_result, 'average': average_result})
+        else:
+            competition_count.append({'personId': person['personId'], 'companzahl': person['comp_count']})
+            
+            if person['personId']:
+                for event_records in person['personal_bests']:
+                    if event_records['type'] == 'single':
+                        ranking_single.append({'personId': person['personId'], 'eventId': event_records['eventId'], 'best': event_records['best']})
+                        
     return (competitor_information, ranking_single, competition_count)
-
-# Get a specific result
-def get_result(person, results_event):
-    result = '0.00'
-    for id in results_event:
-        if person['personId'] == id['personId']:
-            result = str(round(id['best'] / 100, 2))
-            break
-
-    while len(result.split('.')[1]) < 2:
-        result = ''.join([result, '0'])
-    return result

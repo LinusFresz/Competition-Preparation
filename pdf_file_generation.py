@@ -92,7 +92,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
         
         if len(result_string_nametags) % 2 == 1:
             result_string_nametags.append(('', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',),)
-        for person in range(0, len(result_string_nametags)):
+        for person in tqdm.tqdm(range(0, len(result_string_nametags))):
             if person % 2 == 0:
                 swapping_id = person + 1
                 swapping_person = result_string_nametags[swapping_id]
@@ -172,7 +172,7 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)
     scoresheet_file = '{}/{}Scoresheets.pdf'.format(competition_name, competition_name_stripped) 
 
-    for event in event_info:
+    for event in tqdm.tqdm(event_info):
         if event['event'] != '333fm' and event['round'] == '1':
             scoresheet_list = []
             counter = 0
@@ -180,11 +180,7 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
             
             if event['event'] in events_ranking_by_speed:
                 result_string_sorted_events = sorted(result_string, key=lambda x:x[event_ids[event['event']]])
-            #if (len(result_string_sorted_events) == 2):
-            #    result_string_sorted_events = result_string_sorted_events[0]
-            #print(event, len(result_string_sorted_events))
             for name in result_string_sorted_events:
-                #if isinstance(name, list):
                 if str(name[event_ids[event['event']]]).isdigit():
                     scoresheet_list.append(name)
                     counter += 1
@@ -271,7 +267,9 @@ def write_name(label, width, height, information):
     # Ranking
     ranking = ''
     if name['single'] != '0.00':
-        ranking = '3x3x3: {} ({})'.format(str(name['single']), str(name['average']))
+        ranking = '3x3x3: {}'.format(str(name['single']))
+        if name['average'] != '0.00':
+            ranking += ' ({})'.format(str(name['average']))
     label.add(shapes.String(width/2.0, height-145, ranking, textAnchor='middle', fontSize=12, fontName='Arial'))
     
 ### Write grouping on back of a nametag
