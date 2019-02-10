@@ -1,11 +1,8 @@
-# Ignore DB setup
-static/config.py
-
 # Ignore Python files
 __pycache__/
 
 # Ignore textfile which has to be downloaded manualle
-Trebuchet.ttf
+#Trebuchet.ttf
 
 # Ignore competition folders which were used for testing
 *2018/
