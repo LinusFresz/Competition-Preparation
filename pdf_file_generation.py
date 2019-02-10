@@ -179,15 +179,15 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
             result_string_sorted_events = result_string
             
             if event['event'] in events_ranking_by_speed:
-                result_string_sorted_events = sorted(result_string[0], key=lambda x:x[event_ids[event['event']]])
-            if (len(result_string_sorted_events) == 2):
-                result_string_sorted_events = result_string_sorted_events[0]
-            print(event, len(result_string_sorted_events))
+                result_string_sorted_events = sorted(result_string, key=lambda x:x[event_ids[event['event']]])
+            #if (len(result_string_sorted_events) == 2):
+            #    result_string_sorted_events = result_string_sorted_events[0]
+            #print(event, len(result_string_sorted_events))
             for name in result_string_sorted_events:
-                if isinstance(name, list):
-                    if str(name[event_ids[event['event']]]).isdigit():
-                        scoresheet_list.append(name)
-                        counter += 1
+                #if isinstance(name, list):
+                if str(name[event_ids[event['event']]]).isdigit():
+                    scoresheet_list.append(name)
+                    counter += 1
             
             # Fill empty pages with blank scoresheets
             if (counter % 4) != 0 and not only_one_competitor:

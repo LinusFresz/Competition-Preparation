@@ -125,7 +125,7 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
                     break
     if only_one_competitor:
         if grouping_competitor:
-            return [grouping_competitor]
+            return ([grouping_competitor], event_ids)
         else:
             print('')
             print("ERROR!! Competitor '{}' not found.".format(scoresheet_competitor_name))

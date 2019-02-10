@@ -421,7 +421,7 @@ if new_creation or blank_sheets or create_only_nametags:
 #EXCEPTION: no scoresheets created for 3x3x3 Fewest Moves
 if new_creation or reading_grouping_from_file:
     if reading_grouping_from_file: 
-        result_string = get_grouping_from_file(
+        result_string, events_ids = get_grouping_from_file(
                 grouping_file_name, event_dict, event_ids, \
                 only_one_competitor, scoresheet_competitor_name
                 )
