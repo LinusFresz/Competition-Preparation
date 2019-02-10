@@ -143,20 +143,20 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
                             last_place = max_competitors
                 
                         if loop_counter == 100000:
-                            repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
+                            repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter, scrambling_run_id)
                             break
                     loop_counter += 1
     return (result_string, scrambler_list, event_ids, row_count)
 
 ### If not enough scramblers were found, use similar events to determine scramblers
 # e.g. use competitors from 333 if not enough scramblers were found for 333bf, 333ft etc.
-def repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter):
+def repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter, scrambling_run_id):
     found_scrambler = False
     error_string = 'ERROR!! Not enough scramblers found for {}'.format(round_id)
     if group_number > 1:
         error_string = ''.join([error_string, ', Group {} of {} groups'.format(str(group_number), groups)])
     error_string_id = 'no_scramblers_{}'.format(event)
-    if event[0].isdigit() and len(event) > 3 and event != '333mbf' and event[:3] in event_ids_wca:
+    if event[0].isdigit() and len(event) > 3 and event != '333mbf' and event[:3] in event_ids_wca and scrambling_run_id == 1:
         error_string = ''.join([error_string, ', replaced with competitors from {}.'.format(round_id[:5])])
         select_scrambler(event, round_number, round_id, scrambler_count, 0, 40, groups, 2, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter)
         found_scrambler = True
