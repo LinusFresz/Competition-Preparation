@@ -90,9 +90,9 @@ while True:
 ### Evaluation of script selection and initialization
 # Get necessary information for new competition
 if new_creation or create_only_nametags:
-    wca_info = get_information('Use WCA website information? (y/n) ')
+    wca_info = get_information('Used WCA registration for this competition? (y/n) ')
     if wca_info:
-        print('Using WCA website information.')
+        print('Using WCA registration information.')
     wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(True)
     if not create_only_registration_file:
         two_sided_nametags = get_information('Create two-sided nametags? (grouping (and scrambling) information on the back) (y/n)')

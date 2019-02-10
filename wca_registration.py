@@ -37,6 +37,8 @@ def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags
 # Get user input for wca login (mail-address, password and competition name)
 # All try-except cases were implemented for simple development and will not change the normal user input
 def wca_registration(new_creation):
+    print('')
+    print('To get the competition information (such as events and schedule), please enter your WCA login credentials.')
     while True:
         try:
             wca_mail = credentials.mail_address
@@ -114,7 +116,7 @@ def get_competitor_information_from_cubecomps(cubecomps_id, competition_name):
     cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}'.format(comp_id)
     cubecomps_api = requests.get(cubecomps_api_url).json()
             
-    if cubecomps_api['name'] != competition_name:
+    if cubecomps_api['name'] != competition_name and cubecomps_api['name'] != competition_name.replace(' ', ''):
         print('Cubecomps link does not match given competition name. Script uses fallback to registration ids from WCA website!')
         use_cubecomps_ids = False
     else:
