@@ -137,12 +137,12 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
                         new_scrambler = ftfy.fix_text(ranking[rank][0])
                         scrambler_list[scrambler].append(new_scrambler)
 
-                    if loop_counter % 10000 == 0:
+                    if loop_counter % 1000 == 0:
                         last_place += 5
                         if last_place > max_competitors:
                             last_place = max_competitors
                 
-                        if loop_counter == 100000:
+                        if loop_counter == 10000:
                             repeat_select_scrambler(event, round_number, round_id, scrambler_count, groups, group_number, result_string, ranking_single, competition_count, event_ids, event_ids_wca, column_ids, row_count, registration_list, scrambler_list, competitor_information, round_counter, scrambling_run_id)
                             break
                     loop_counter += 1
