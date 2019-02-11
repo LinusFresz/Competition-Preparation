@@ -20,6 +20,6 @@ Make sure to add all event information in the 'Manage events' tab for your compe
 ### System setup
 
 - `pip install -r requirements.txt`
-- `python3 competition_grouping_scrambling.py` or `python competition_grouping_scrambling.py`
+- `python3 src/main.py` or `python src/main.py`
 
 For further details and support, please contact Linus Frész, linuf95@gmail.com

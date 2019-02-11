@@ -1,5 +1,5 @@
 from modules import *
-from helpers.helpers import format_minutes_and_seconds, create_two_strings_out_of_one, enlarge_string
+import helpers.helpers as helper
 
 ### Some file specific helper functions
 # Add whitespace/other characters to string
@@ -41,7 +41,7 @@ def scoresheet_competitor_and_competition_name(competitor_name, competition_name
 
 def scoresheet_limit(event_name, limit, cumulative, text_width):
     event_width = stringWidth(event_name, 'Arial', fontSize=25)
-    minutes, seconds = format_minutes_and_seconds(limit)
+    minutes, seconds = helper.format_minutes_and_seconds(limit)
     limit = format_limit_string(cumulative, minutes, seconds)
     event_width, font_size_event = enlarge_string_size(event_name, text_width, font_size=25)
     
@@ -50,7 +50,7 @@ def scoresheet_limit(event_name, limit, cumulative, text_width):
 def scoresheet_event_name(cutoff, limit, event_name, label, width, height, font_size_event):
     cutoff_time = ''
     if cutoff != 0:
-        minutes, seconds = format_minutes_and_seconds(limit)
+        minutes, seconds = helper.format_minutes_and_seconds(limit)
         cutoff_time = '{}:{}'.format(minutes, seconds)
 
     s = shapes.String(width/2.0, height-50, event_name, textAnchor='middle', fontName='Arial')
@@ -62,7 +62,7 @@ def scoresheet_event_name(cutoff, limit, event_name, label, width, height, font_
 # Body of scoresheet, containing competitor name, competition name, event, group etc.
 def scoresheet_body(registration_id, group, limit, font_size_limit, label, height, width, scrambler_signature, event_format, event_name, cutoff_number, cutoff_time, name):
     if registration_id:
-        registration_id = enlarge_string(registration_id, ' ', 3)
+        registration_id = helper.enlarge_string(registration_id, ' ', 3)
         label.add(shapes.Rect(10,height-83,22, 15, fillColor=colors.white))
         label.add(shapes.String(14, height-79, registration_id, fontSize=10, fontName='Arial'))
     label.add(shapes.String(width-50, height-80, group, fontSize=12, fontName='Arial'))
@@ -107,16 +107,16 @@ def scoresheet_results_header(label, limit, limit_width, font_size_limit, height
     time_limit_string1 = limit
     time_limit_string2, time_limit_string3 = '', ''
     if time_limit_width > (120 + extra_width) and time_limit_width <= (240 + 2*extra_width):
-        time_limit_string1, time_limit_string2 = create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
+        time_limit_string1, time_limit_string2 = helper.create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
 
         label.add(shapes.Rect(80-shift,height-120,125+shift, 30, fillColor=colors.white))
         label.add(shapes.String(84-shift,height-100,time_limit_string1, fontSize=font_size_limit, fontName='Arial'))
         label.add(shapes.String(84-shift,height-115,time_limit_string2, fontSize=font_size_limit, fontName='Arial'))
         height = height - 15
     elif time_limit_width > (240 + extra_width):
-        time_limit_string1, time_limit_string2 = create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
+        time_limit_string1, time_limit_string2 = helper.create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
         limit = time_limit_string2.replace('  ', ' ')
-        time_limit_string2, time_limit_string3 = create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
+        time_limit_string2, time_limit_string3 = helper.create_two_strings_out_of_one(limit, font_size_limit, 120 + extra_width)
 
         label.add(shapes.Rect(80-shift,height-135,125+shift, 45, fillColor=colors.white))
         label.add(shapes.String(84-shift,height-100,time_limit_string1, fontSize=font_size_limit, fontName='Arial'))

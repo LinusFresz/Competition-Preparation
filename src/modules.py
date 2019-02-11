@@ -28,10 +28,17 @@ from reportlab.lib import colors
 # Self made modules
 from error_messages import ErrorMessages
 
+# Catch user being in src/ folder instead of main directory
+try:
+    os.chdir('src/')
+    os.chdir('..')
+except FileNotFoundError:
+    os.chdir('..')
+
 ### Initialize font
-if not os.path.isfile('Trebuchet.ttf'):
+if not os.path.isfile('src/data/Trebuchet.ttf'):
     print("ERROR!! File 'Trebuchet.ttf' does not exist. Please download from \n",
            "https://www.fontpalace.com/font-download/Trebuchet+MS/\n and add to",
            "{}/.".format(os.path.dirname(os.path.abspath(__file__))))
     sys.exit()
-registerFont(TTFont('Arial', 'Trebuchet.ttf'))
+registerFont(TTFont('Arial', 'src/data/Trebuchet.ttf'))

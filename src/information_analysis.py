@@ -2,8 +2,8 @@
 
 from modules import *
 
-from helpers.helpers import format_minutes_and_seconds, enlarge_string, format_result
-from wca_registration import get_wca_competitor
+import helpers.helpers as helper
+import apis
 
 # initialize various variables for parsing and analysis
 registration_list, competitor_information = [], []
@@ -145,10 +145,10 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
     except KeyError:
         return []
         
-    with open('data/WCA_export_Countries.tsv', 'r') as country_file:
+    with open('src/data/WCA_export_Countries.tsv', 'r') as country_file:
         countries = list(csv.reader(country_file, delimiter='\t'))[1:]
         
-    for registrations in wca_json['persons']:
+    for registrations in tqdm.tqdm(wca_json['persons']):
         registered_events = ()
         competitor_role = ''
         single = '0.00'
@@ -169,11 +169,11 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
                 if(event_records['type'] == 'single'):
                     single = round(event_records['best'] / 100, 2)
                     if single >= 60:
-                        single = format_result(single)
+                        single = helper.format_result(single)
                 else:
                     average = round(event_records['best'] / 100, 2)
                     if average >= 60:
-                        average = format_result(average)
+                        average = helper.format_result(average)
             
         information = {
                 'name': registrations['name'].split(' (')[0].strip(), 
@@ -195,7 +195,7 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
         if not create_scoresheets_second_rounds_bool:
             if registrations['wcaId']:
                 if not only_one_competitor:
-                    comp_count = get_wca_competitor(registrations['wcaId'])['competition_count']
+                    comp_count = apis.get_wca_competitor(registrations['wcaId'])['competition_count']
                     information.update(
                             {
                             'comp_count': comp_count,
@@ -203,7 +203,7 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
                             }
                         )
                 if only_one_competitor and registrations['wcaId'] == scoresheet_competitor_name:
-                    comp_count = get_wca_competitor(registrations['wcaId'])['competition_count']
+                    comp_count = apis.get_wca_competitor(registrations['wcaId'])['competition_count']
                     information.update(
                             {
                             'comp_count': comp_count,
@@ -271,7 +271,7 @@ def get_events_from_wcif(wca_json, event_dict):
                 if wca_rounds['advancementCondition']['type'] == 'percent':
                     advancing_competitors = str(wca_rounds['advancementCondition']['level']) + '%'
                 elif wca_rounds['advancementCondition']['type'] == 'attemptResult':
-                    minutes, seconds = format_minutes_and_seconds(wca_rounds['advancementCondition']['level'] / 100)
+                    minutes, seconds = helper.format_minutes_and_seconds(wca_rounds['advancementCondition']['level'] / 100)
                     advancing_competitors = '<{}:{}'.format(minutes, seconds)
                 else:
                     advancing_competitors = str(wca_rounds['advancementCondition']['level'])

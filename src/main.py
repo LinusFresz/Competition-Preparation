@@ -4,11 +4,11 @@
 
 ### Module import
 from modules import *
-from helpers.helpers import initiate_result_string, update_scrambler_list
-from wca_registration import get_file_name, competition_information_fetch, wca_registration, get_wca_info, get_information, get_competitor_information_from_cubecomps, get_round_information_from_cubecomps, get_wca_competitor
-from information_analysis import column_ids, formats, format_names, get_registration_from_file, get_registrations_from_wcif, get_events_from_wcif, get_schedule_from_wcif, get_events_per_day, get_competitor_events_per_day, prepare_registration_for_competitors, get_grouping_from_file
-from grouping_scrambling_functions import run_grouping_and_scrambling, update_event_ids, update_column_ids, sort_scrambler_by_schedule, get_competitor_results_from_wcif
-from pdf_file_generation import create_blank_sheets, create_scoresheets, create_scoresheets_second_rounds, create_registration_file, create_schedule_file, create_nametag_file, create_scrambling_file, create_grouping_file
+import helpers.helpers as helper
+import apis
+import information_analysis as analysis
+import grouping_scrambling_functions as grouping_scrambling
+import pdf_file_generation as pdf_files
 
 ### Collection of booleans and variables for various different options from this script
 # Most of these are used globally
@@ -90,22 +90,22 @@ while True:
 ### Evaluation of script selection and initialization
 # Get necessary information for new competition
 if new_creation or create_only_nametags:
-    wca_info = get_information('Used WCA registration for this competition? (y/n) ')
+    wca_info = apis.get_information('Used WCA registration for this competition? (y/n) ')
     if wca_info:
         print('Using WCA registration information.')
-    wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(True)
+    wca_password, wca_mail, competition_name, competition_name_stripped = apis.wca_registration(True)
     if not create_only_registration_file:
-        two_sided_nametags = get_information('Create two-sided nametags? (grouping (and scrambling) information on the back) (y/n)')
+        two_sided_nametags = apis.get_information('Create two-sided nametags? (grouping (and scrambling) information on the back) (y/n)')
         if two_sided_nametags:
             print('Using WCA registration and event information.')
         if not create_only_nametags:
-            scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
+            scrambler_signature = apis.get_information('Add scrambler signature field to scorecards? (y/n)')
         
             print('Please enter cubecomps link to competition: (leave blank if not needed)')
             print('If provided, the script will use registration ids from cubecomps for scoresheets. This ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!). The registrations from the competition must be uploaded to cubecomps before using this option.')
             cubecomps_id = input()
         if cubecomps_id:
-            competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
+            competitors_api, use_cubecomps_ids = apis.get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
 
     if create_only_nametags and not two_sided_nametags and not wca_info:
         get_registration_information = False
@@ -123,66 +123,66 @@ if new_creation or create_only_nametags:
 
         if nametag_scrambling.upper() == 'Y':
             reading_scrambling_list_from_file = True
-            scrambling_file_name = get_file_name('scrambling')
+            scrambling_file_name = apis.get_file_name('scrambling')
 
-    file_name, grouping_file_name = competition_information_fetch(wca_info, False, create_only_nametags and two_sided_nametags, new_creation)
+    file_name, grouping_file_name = apis.competition_information_fetch(wca_info, False, create_only_nametags and two_sided_nametags, new_creation)
 
     if create_only_nametags and not two_sided_nametags and not wca_info:
         True
     else:
-        competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
+        competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
-    print('Saved registration information from WCA website, extracting data now.')
+    print('Saved registration information from WCA website, extracting data now and collect relevant information...')
 
 # Create blank scoresheets
 elif blank_sheets:
-    scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
+    scrambler_signature = apis.get_information('Add scrambler signature field to scorecards? (y/n)')
     competition_name = input('Competition name or ID: (leave empty if not wanted) ')
     blank_sheets_round_name = input('Round name: (leave empty if not needed) ')
 
 # Select grouping file if only nametags should be generated
 elif reading_grouping_from_file_bool:
-    wca_info = get_information('Use WCA website information? (y/n) ')
+    wca_info = apis.get_information('Use WCA website information? (y/n) ')
     if wca_info:
         print('Using WCA website information.')
-    wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(bool)
-    scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
+    wca_password, wca_mail, competition_name, competition_name_stripped = apis.wca_registration(bool)
+    scrambler_signature = apis.get_information('Add scrambler signature field to scorecards? (y/n)')
     if only_one_competitor:
         scoresheet_competitor_name = input('Competitor name or WCA ID: ')
         try:
-            scoresheet_competitor_api = get_wca_competitor(scoresheet_competitor_name)
+            scoresheet_competitor_api = apis.get_wca_competitor(scoresheet_competitor_name)
             if scoresheet_competitor_api:
                 scoresheet_competitor_name = scoresheet_competitor_api['person']['name']
         except KeyError:
             pass
-    file_name, grouping_file_name = competition_information_fetch(wca_info, True, False, new_creation)
-    competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
+    file_name, grouping_file_name = apis.competition_information_fetch(wca_info, True, False, new_creation)
+    competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
     if not create_only_nametags:        
         print('Please enter cubecomps link to competition: (leave blank if not needed)')
         cubecomps_id = input()
     if cubecomps_id:
-        competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
+        competitors_api, use_cubecomps_ids = apis.get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
 
 # Create schedule from wca website information
 elif create_only_schedule:
-    wca_info = get_information('Use WCA website information? (y/n) ')
+    wca_info = apis.get_information('Use WCA website information? (y/n) ')
     if wca_info:
         print('Using WCA website information.')
     if not wca_info:
         print('ERROR!! Schedule can only be generated from WCA website data. Script aborted.')
         sys.exit()
-    wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(True)
+    wca_password, wca_mail, competition_name, competition_name_stripped = apis.wca_registration(True)
     two_sided_nametags = False
     
-    file_name, grouping_file_name = competition_information_fetch(wca_info, False, two_sided_nametags, new_creation)
+    file_name, grouping_file_name = apis.competition_information_fetch(wca_info, False, two_sided_nametags, new_creation)
     
-    competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
+    competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
 # Create scoresheets for seconds rounds by using cubecomps.com information
 elif create_scoresheets_second_rounds_bool:
     cubecomps_id = input('Link to previous round: ')
-    cubecomps_api, competitors, event_round_name, advancing_competitors_next_round, competition_name, competition_name_stripped = get_round_information_from_cubecomps(cubecomps_id)
+    cubecomps_api, competitors, event_round_name, advancing_competitors_next_round, competition_name, competition_name_stripped = apis.get_round_information_from_cubecomps(cubecomps_id)
     
     event_2 = event_round_name.split(' - ')[0].replace(' Cube', '')
     event_2 = list(event_dict.keys())[list(event_dict.values()).index(event_2)]
@@ -212,14 +212,14 @@ elif create_scoresheets_second_rounds_bool:
             )
     event_round_name = next_round_name.replace(' 4', '')
 
-    wca_password, wca_mail = wca_registration(new_creation)
-    wca_info = get_information('Use WCA website information? (y/n) ')
+    wca_password, wca_mail = apis.wca_registration(new_creation)
+    wca_info = apis.get_information('Use WCA website information? (y/n) ')
     if wca_info:
         print('Using WCA website information.')
-    scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
-    file_name, grouping_file_name = competition_information_fetch(wca_info, False, False, new_creation)
+    scrambler_signature = apis.get_information('Add scrambler signature field to scorecards? (y/n)')
+    file_name, grouping_file_name = apis.competition_information_fetch(wca_info, False, False, new_creation)
 
-    competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
+    competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
 ### Get all information from wca competition (using WCIF) and collection information from WCA database export
 if get_registration_information:
@@ -227,23 +227,23 @@ if get_registration_information:
     wca_json = json.loads(competition_wcif_file)
     
     # Registration
-    competitor_information_wca = get_registrations_from_wcif(
+    competitor_information_wca = analysis.get_registrations_from_wcif(
             wca_json, create_scoresheets_second_rounds_bool, \
             use_cubecomps_ids, competitors, competitors_api, \
             only_one_competitor, scoresheet_competitor_name \
             )
     
     # Events
-    event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count, round_counter, event_list_wca = get_events_from_wcif(wca_json, event_dict)
+    event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count, round_counter, event_list_wca = analysis.get_events_from_wcif(wca_json, event_dict)
 
     # Schedule
-    full_schedule, competition_days, competition_start_day, timezone_utc_offset, events_per_day = get_schedule_from_wcif(wca_json)
+    full_schedule, competition_days, competition_start_day, timezone_utc_offset, events_per_day = analysis.get_schedule_from_wcif(wca_json)
 
     # Evaluate collected information
     if wca_info:
         competitor_information = competitor_information_wca
         
-        wca_ids, registration_list_wca = prepare_registration_for_competitors(competitor_information, event_list_wca, len(event_list_wca))
+        wca_ids, registration_list_wca = analysis.prepare_registration_for_competitors(competitor_information, event_list_wca, len(event_list_wca))
         
         if not registration_list_wca:
             print('')
@@ -251,7 +251,7 @@ if get_registration_information:
             sys.exit()
         registration_list_wca = sorted(sorted(registration_list_wca, key=lambda x: x[1]), key=lambda x: x[1].split()[-1])
     
-        column_ids, event_list = update_column_ids(event_list_wca, column_ids)
+        analysis.column_ids, event_list = grouping_scrambling.update_column_ids(event_list_wca, analysis.column_ids)
     if group_list:
         print('WCA information sucessfully imported.')
     else:
@@ -259,7 +259,7 @@ if get_registration_information:
         print('Please make sure to enter all necessary information in the "Manage events" tab on the WCA competition page.')
         sys.exit()
     if minimal_scramble_set_count == 1:
-        continue_script = get_information('It looks like all your events only have one set of scrambles. Do you still want to continue running this script? (y/n)')
+        continue_script = apis.get_information('It looks like all your events only have one set of scrambles. Do you still want to continue running this script? (y/n)')
         if not continue_script:
             print('')
             print('Please edit the group information in the competition event tab  before running this script again.')
@@ -273,7 +273,7 @@ if get_registration_information:
     if not wca_info:
         print('Open registration file...')
         use_csv_registration_file = True
-        column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = get_registration_from_file(file_name, new_creation, reading_grouping_from_file_bool, use_csv_registration_file, column_ids, competitor_information_wca, competitors)
+        analysis.column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = analysis.get_registration_from_file(file_name, new_creation, reading_grouping_from_file_bool, use_csv_registration_file, analysis.column_ids, competitor_information_wca, competitors)
 
         registration_list = sorted(sorted(all_data, key= lambda x: x[1]), key=lambda x: x[1].split()[-1])
         
@@ -287,7 +287,7 @@ if get_registration_information:
 ### Parse registration file
 if read_only_registration_file:
     use_csv_registration_file = False
-    column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = get_registration_from_file(file_name, new_creation, reading_grouping_from_file_bool, use_csv_registration_file, column_ids, event_counter, competitor_information_wca, competitors)
+    analysis.column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = analysis.get_registration_from_file(file_name, new_creation, reading_grouping_from_file_bool, use_csv_registration_file, analysis.column_ids, event_counter, competitor_information_wca, competitors)
 
 ### Create schedule (if exists on WCA website)
 if create_schedule and full_schedule:
@@ -295,16 +295,16 @@ if create_schedule and full_schedule:
     
     # Use schedule to determine the days each competitor registered for
     for schedule_event in full_schedule:
-        events_per_day = get_events_per_day(schedule_event, events_per_day)
+        events_per_day = analysis.get_events_per_day(schedule_event, events_per_day)
 
-    registration_list = get_competitor_events_per_day(registration_list, column_ids, events_per_day)
+    registration_list = analysis.get_competitor_events_per_day(registration_list, analysis.column_ids, events_per_day)
 
     # Create schedule PDF
     if create_schedule:
-        create_schedule_file(
+        pdf_files.create_schedule_file(
                 competition_name, competition_name_stripped, full_schedule,
                 event_info, competition_days, competition_start_day,
-                timezone_utc_offset, formats, format_names,
+                timezone_utc_offset, analysis.formats, analysis.format_names,
                 round_counter
                 )
         if create_only_schedule:
@@ -318,7 +318,7 @@ if create_registration_file_bool:
     print('')
     print('Create registration file...')
     output_registration = '{}/{}Registration.csv'.format(competition_name, competition_name_stripped)
-    create_registration_file(output_registration, registration_list, column_ids)
+    pdf_files.create_registration_file(output_registration, registration_list, analysis.column_ids)
 
     print('Registration file successfully created.')
     print('')
@@ -329,12 +329,12 @@ if create_registration_file_bool:
 ### Create blank scoresheets if wanted
 if blank_sheets:
     print('Creating blank sheets...')
-    create_blank_sheets(competition_name, scrambler_signature, blank_sheets_round_name)
+    pdf_files.create_blank_sheets(competition_name, scrambler_signature, blank_sheets_round_name)
 
 ### Create scoresheets for consecutive rounds and exit script
 if create_scoresheets_second_rounds_bool:
     print('Creating scoresheets for {} ...'.format(event_round_name))
-    create_scoresheets_second_rounds(
+    pdf_files.create_scoresheets_second_rounds(
             competition_name, competitor_information, \
             advancing_competitors_next_round, event_round_name, event_info, \
             event_2, next_round_name, scrambler_signature \
@@ -342,12 +342,12 @@ if create_scoresheets_second_rounds_bool:
 
 ### Create new string for grouping and add name + DOB
 if registration_list:
-    result_string = initiate_result_string(registration_list)
+    result_string = helper.initiate_result_string(registration_list)
         
 ### Check for matching registration and grouping information
 if create_only_nametags:
     if two_sided_nametags:
-        result_string, event_ids = get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name)
+        result_string, event_ids = analysis.get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name)
         new_result_string, new_competitor_information = [], []
         if len(competitor_information) != len(result_string):
             print('')
@@ -372,20 +372,20 @@ if create_only_nametags:
 if new_creation or create_only_nametags:
     if wca_ids and event_list:
         print('Get necessary results from WCA website, this may take a few seconds...')
-        competitor_information, ranking_single, competition_count = get_competitor_results_from_wcif(event_list, wca_ids, competitor_information, create_only_nametags, wca_info)
+        competitor_information, ranking_single, competition_count = grouping_scrambling.get_competitor_results_from_wcif(event_list, wca_ids, competitor_information, create_only_nametags, wca_info)
 
 # Run grouping and scrambling
 if new_creation:
     print('')
     print('Running grouping and scrambling...')
-    result_string, scrambler_list = run_grouping_and_scrambling(group_list, result_string, registration_list, column_ids, ranking_single, competition_count, event_ids, event_ids_wca, competitor_information, round_counter)
+    result_string, scrambler_list = grouping_scrambling.run_grouping_and_scrambling(group_list, result_string, registration_list, analysis.column_ids, ranking_single, competition_count, event_ids, event_ids_wca, competitor_information, round_counter)
 
     # Add dummy columns for events with < 5 scramblers
     for scrambler_id in range(0, len(scrambler_list)):
         while len(scrambler_list[scrambler_id]) < 7:
             scrambler_list[scrambler_id].append('dummy name')
 
-    scrambler_list_sorted_by_schedule = sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter)
+    scrambler_list_sorted_by_schedule = grouping_scrambling.sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter)
     if scrambler_list_sorted_by_schedule:
         scrambler_list = scrambler_list_sorted_by_schedule
     print('Grouping and scrambling done.')
@@ -396,7 +396,7 @@ if reading_scrambling_list_from_file:
         reader = csv.reader(f)
         scrambler_list = list(reader)
     del scrambler_list[0:2]
-    scrambler_list = update_scrambler_list(scrambler_list)
+    scrambler_list = helper.update_scrambler_list(scrambler_list)
         
 ### Save all results to separate files
 if new_creation or blank_sheets or create_only_nametags:
@@ -406,7 +406,7 @@ if new_creation or blank_sheets or create_only_nametags:
     output_grouping = '{}/{}Grouping.csv'.format(competition_name, competition_name_stripped)
     
     # Nametag file
-    sheet = create_nametag_file(
+    sheet = pdf_files.create_nametag_file(
             competitor_information, competition_name, competition_name_stripped, \
             two_sided_nametags, create_only_nametags, result_string, \
             event_ids, scrambler_list, event_dict, \
@@ -416,10 +416,10 @@ if new_creation or blank_sheets or create_only_nametags:
     print('Create scrambling and grouping file...')
 
     # Grouping file
-    create_grouping_file(output_grouping, event_ids, event_dict, result_string)
+    pdf_files.create_grouping_file(output_grouping, event_ids, event_dict, result_string)
     
     # Scrambling file
-    create_scrambling_file(output_scrambling, competition_name, scrambler_list)
+    pdf_files.create_scrambling_file(output_scrambling, competition_name, scrambler_list)
     print('Scrambling and grouping successfully saved. Nametags compiled into PDF: {0:d} label(s) output on {1:d} page(s).'.format(sheet.label_count, sheet.page_count))
     print('')
 
@@ -427,13 +427,13 @@ if new_creation or blank_sheets or create_only_nametags:
 #EXCEPTION: no scoresheets created for 3x3x3 Fewest Moves
 if new_creation or reading_grouping_from_file_bool:
     if reading_grouping_from_file_bool: 
-        result_string, events_ids = get_grouping_from_file(
+        result_string, events_ids = analysis.get_grouping_from_file(
                 grouping_file_name, event_dict, event_ids, \
                 only_one_competitor, scoresheet_competitor_name
                 )
     
     print('Creating scoresheets...')
-    create_scoresheets(
+    pdf_files.create_scoresheets(
             competition_name, competition_name_stripped, result_string, \
             event_ids, event_info, event_dict, \
             only_one_competitor, round_counter, competitor_information, \

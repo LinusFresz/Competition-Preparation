@@ -2,8 +2,8 @@
 
 from modules import *
 
-from wca_registration import get_wca_competitor
-from helpers.helpers import format_result
+import apis
+import helpers.helpers as helper
 
 events_ranking_by_speed = (
         '222', '333', '444',
@@ -371,7 +371,7 @@ def get_competitor_results_from_wcif(event_list, wca_ids, competitor_information
         average_result = '0.00'
         if not wca_info:
             if person['personId']:
-                wca_api_competitor = get_wca_competitor(person['personId'])
+                wca_api_competitor = apis.get_wca_competitor(person['personId'])
                 comp_count = wca_api_competitor['competition_count']
                 for event_records in wca_api_competitor['personal_records']:
                     ranking_single.append({'personId': person['personId'], 'eventId': event_records, 'best': wca_api_competitor['personal_records'][event_records]['single']['best']})
@@ -380,13 +380,13 @@ def get_competitor_results_from_wcif(event_list, wca_ids, competitor_information
                         try:
                             single_result = round(wca_api_competitor['personal_records'][event_records]['single']['best'] / 100, 2)
                             if single_result >= 60:
-                                single = format_result(single_result)
+                                single = helper.format_result(single_result)
                         except KeyError:
                             pass
                         try:   
                             average_result = round(wca_api_competitor['personal_records'][event_records]['average']['best'] / 100, 2)
                             if average_result >= 60:
-                                average_result = format_result(average_result)
+                                average_result = helper.format_result(average_result)
                         except KeyError:
                             pass
             person.update({'comp_count': comp_count, 'single': single_result, 'average': average_result})
