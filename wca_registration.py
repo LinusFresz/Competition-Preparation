@@ -40,10 +40,7 @@ def wca_registration(new_creation):
     print('')
     print('To get the competition information (such as events and schedule), please enter your WCA login credentials.')
     while True:
-        try:
-            wca_mail = credentials.mail_address
-        except:
-            wca_mail = input('Your WCA mail address: ')
+        wca_mail = input('Your WCA mail address: ')
         # Validation if correct mail address was entered
         if '@' not in wca_mail:
             if wca_mail[:4].isdigit() and wca_mail[8:].isdigit():
@@ -52,16 +49,33 @@ def wca_registration(new_creation):
                 print('Please enter valid email address.')
         else:
             break
-    try:
-        wca_password = credentials.password
-    except:
-        wca_password = getpass.getpass('Your WCA password: ')
+    wca_password = getpass.getpass('Your WCA password: ')
     
     if new_creation:
-        try:
-            competition_name = credentials.competition_name_input
-        except:
+        print('Getting upcoming competitions from WCA website...')
+        upcoming_competitions = sorted(json.loads(get_upcoming_wca_competitions(wca_password, wca_mail)), key=lambda x:x['start_date'])
+        counter = 1
+        if upcoming_competitions:
+            print('Please select competition (by number) or enter competition name:')
+            for competition in upcoming_competitions:
+                print('{}. {}'.format(counter, competition['name']))
+                counter += 1
+        not_valid_competition_name = True
+        while(not_valid_competition_name):
             competition_name = input('Competition name or ID: ')
+            if competition_name.isdigit():
+                if int(competition_name) < len(upcoming_competitions):
+                    competition_name = upcoming_competitions[int(competition_name)-1]['name']
+                    not_valid_competition_name = False
+                else:
+                    print('Wrong input, please select number or enter competition name.')
+            else:
+                try:
+                    get_wca_competition(competition_name)['name']
+                    not_valid_competition_name = False
+                except KeyError:
+                    print('Competition {} not found on WCA website, please enter valid competition name.'.format(competition_name))
+
         create_competition_folder(competition_name)
         competition_name_stripped = competition_name.replace(' ', '')
         return (wca_password, wca_mail, competition_name, competition_name_stripped)
@@ -73,19 +87,9 @@ def wca_registration(new_creation):
 # https://github.com/thewca/worldcubeassociation.org/wiki/OAuth-documentation-notes
 def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped):
     print('Fetching information from WCA competition website...')
-    url1 = 'https://www.worldcubeassociation.org/oauth/token'
-    url2 = 'https://www.worldcubeassociation.org/api/v0/competitions/' + competition_name_stripped + '/wcif'
+    url = 'https://www.worldcubeassociation.org/api/v0/competitions/{}/wcif'.format(competition_name_stripped)
     
-    wca_headers = {'grant_type':'password', 'username':wca_mail, 'password':wca_password, 'scope':'public manage_competitions'}
-    wca_request_token = requests.post(url1, data=wca_headers)
-    try:
-        wca_access_token = json.loads(wca_request_token.text)['access_token']
-    except KeyError:
-        print('ERROR!! Failed to get competition information.\n\n Given error message: {}\n Message:{}\n\nScript aborted.'.format(json.loads(wca_request_token.text)['error'], json.loads(wca_request_token.text)['error_description']))
-        sys.exit()
-    wca_authorization = 'Bearer ' + wca_access_token
-    wca_headers2 = {'Authorization': wca_authorization}
-    competition_wcif_info = requests.get(url2, headers=wca_headers2)
+    competition_wcif_info = wca_api(url, wca_mail, wca_password)
 
     # Error handling for wrong WCA website information and file-save if successful information fetch
     error_handling_wcif(competition_name, competition_wcif_info.text)
@@ -94,7 +98,7 @@ def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stri
 
 # Simple request to get information about one competitor
 def get_wca_competitor(wca_id):
-    url = 'https://www.worldcubeassociation.org/api/v0/persons/' + wca_id
+    url = 'https://www.worldcubeassociation.org/api/v0/persons/{}'.format(wca_id)
     competitor_info = ''
     api_info = requests.get(url)
     try:
@@ -104,6 +108,43 @@ def get_wca_competitor(wca_id):
     except json.decoder.JSONDecodeError:
         pass
     return competitor_info
+
+# Simple request to get information about input competition name
+def get_wca_competition(competition_name):
+    url = 'https://www.worldcubeassociation.org/api/v0/competitions/{}'.format(competition_name.replace(' ', ''))
+
+    competition_info = ''
+    api_info = requests.get(url)
+    try:
+        competition_info = json.loads(api_info.text)
+    except KeyError:
+        return ''
+    return competition_info
+
+# Get upcoming competitions of user
+def get_upcoming_wca_competitions(wca_password, wca_mail):
+    start_date = str(datetime.datetime.today()).split()[0]
+    url = 'https://www.worldcubeassociation.org/api/v0/competitions?managed_by_me=true&start={}'.format(start_date)
+    
+    competition_wcif_info = wca_api(url, wca_mail, wca_password)
+    
+    return competition_wcif_info.text
+
+# Function to actually talk to WCA API and collect response information
+def wca_api(request_url, wca_mail, wca_password):
+    grant_url = 'https://www.worldcubeassociation.org/oauth/token'
+    wca_headers = {'grant_type':'password', 'username':wca_mail, 'password':wca_password, 'scope':'public manage_competitions'}
+    wca_request_token = requests.post(grant_url, data=wca_headers)
+    try:
+        wca_access_token = json.loads(wca_request_token.text)['access_token']
+    except KeyError:
+        print('ERROR!! Failed to get competition information.\n\n Given error message: {}\n Message:{}\n\nScript aborted.'.format(json.loads(wca_request_token.text)['error'], json.loads(wca_request_token.text)['error_description']))
+        sys.exit()
+    wca_authorization = 'Bearer ' + wca_access_token
+    wca_headers2 = {'Authorization': wca_authorization}
+    competition_wcif_info = requests.get(request_url, headers=wca_headers2)
+
+    return competition_wcif_info
 
 ### Cubecomps API
 # API to collect competitor information
