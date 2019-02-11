@@ -1,6 +1,6 @@
 # Competition-Preparation
 
-## What
+## Content
 This script creats various things an organizer needs to have for a competition:
 - competitor groupings
 - scrambling list for all events and rounds (except FMC)
