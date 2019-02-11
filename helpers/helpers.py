@@ -19,8 +19,8 @@ def update_scrambler_list(scrambler_list):
 # Return minutes and seconds for given amount of seconds
 def format_minutes_and_seconds(time_string):
     minutes, seconds = divmod(time_string, 60)
-    minutes = str(minutes)
-    seconds = enlarge_string(str(seconds), '0', 2)
+    minutes = str(int(minutes))
+    seconds = enlarge_string(str(int(seconds)), '0', 2)
     return (minutes, seconds)
 
 # Add whitespace/other characters to string
@@ -40,3 +40,11 @@ def create_two_strings_out_of_one(input_string, font_size, width):
             break
     input_string_string2 = input_string.replace(input_string_string1, '')
     return (input_string_string1, input_string_string2)
+
+# Format results which are over 60 seconds
+def format_result(time):
+    minutes = int(time / 60)
+    seconds = int(time % 60)
+    ms = int(round((time % 60) % 1, 2) * 100)
+    time = '{}:{}.{}'.format(str(minutes), enlarge_string(str(seconds), '0', 2), enlarge_string(str(ms), '0', 2))
+    return time

@@ -6,7 +6,8 @@ import ftfy
 import calendar
 import collections
 import csv
-from helpers.helpers import format_minutes_and_seconds
+from helpers.helpers import format_minutes_and_seconds, enlarge_string, format_result
+from wca_registration import get_wca_competitor
 
 # initialize various variables for parsing and analysis
 registration_list, competitor_information = [], []
@@ -26,11 +27,12 @@ format_names = {
         }
 
 ### Get registration from file if WCA registration is not used
-def get_registration_from_file(file_name, new_creation, reading_grouping_from_file, use_csv_registration_file, column_ids, event_counter, competitor_information_wca, competitors):
+def get_registration_from_file(file_name, new_creation, reading_grouping_from_file, use_csv_registration_file, column_ids, competitor_information_wca, competitors):
     file = open(file_name)
     all_data = []
     wca_ids, event_list = (), ()
     line_count = 0
+    event_counter = 0
     registration_id = 1
     for row in file:
             row_list = row.split(',')
@@ -98,6 +100,7 @@ def get_registration_from_file(file_name, new_creation, reading_grouping_from_fi
                     wca_ids += (str(row_list[3]),)
                 registration_id += 1
             line_count += 1
+            
     return (column_ids, event_list, event_counter, competitor_information, all_data, wca_ids)
 
 ### Read in grouping file if needed for nametags/scoresheets
@@ -125,7 +128,7 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
                     break
     if only_one_competitor:
         if grouping_competitor:
-            return [grouping_competitor]
+            return ([grouping_competitor], event_ids)
         else:
             print('')
             print("ERROR!! Competitor '{}' not found.".format(scoresheet_competitor_name))
@@ -133,25 +136,48 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
     return (result_string, event_ids)
 
 ### WCA WCIF
-# Get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for
-def get_registrations_from_wcif(wca_json, countries, create_scoresheets_second_rounds_bool, use_cubecomps_ids, competitors, competitors_api):
+# Get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for                
+def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool, use_cubecomps_ids, competitors, competitors_api):
     registration_id = 1   
-    all_events = () 
     competitor_information_wca = []
+    
+    # Check if WCA registration was actually used
+    try:
+        wca_json['persons'][0]['registration']
+        if not wca_json['persons'][0]['registration']: 
+            return []
+    except KeyError:
+        return []
+        
+    with open('data/WCA_export_Countries.tsv', 'r') as country_file:
+        countries = list(csv.reader(country_file, delimiter='\t'))[1:]
+        
     for registrations in wca_json['persons']:
         registered_events = ()
         competitor_role = ''
+        single = '0.00'
+        average = '0.00'
         
         for country in countries:
-            if country['iso2'] == registrations['countryIso2']:
-                comp_country = country['id']
+            if country[3] == registrations['countryIso2']:
+                comp_country = country[0]
+
         if registrations['roles']:
             for role in registrations['roles']:
                 competitor_role = ''.join([competitor_role, role.replace('delegate', 'WCA DELEGATE').upper(), ','])
             competitor_role = competitor_role[:-1]
         for competitor_events in registrations['registration']['eventIds']:
-            all_events += (competitor_events,)
             registered_events += (competitor_events,)
+        for event_records in registrations['personalBests']:
+            if (event_records['eventId'] == '333'):
+                if(event_records['type'] == 'single'):
+                    single = round(event_records['best'] / 100, 2)
+                    if single >= 60:
+                        single = format_result(single)
+                else:
+                    average = round(event_records['best'] / 100, 2)
+                    if average >= 60:
+                        average = format_result(average)
             
         information = {
                 'name': registrations['name'].split(' (')[0].strip(), 
@@ -162,8 +188,23 @@ def get_registrations_from_wcif(wca_json, countries, create_scoresheets_second_r
                 'role': competitor_role, 
                 'guests': str(registrations['registration']['guests']), 
                 'registered_events': registered_events, 
-                'registration_id': registration_id
+                'registration_id': registration_id,
+                'single': str(single),
+                'average': str(average),
+                'comp_count': 0
                 }
+                
+        # Make this exception to use WCA /persons API only if needed (i.e. for everything except 
+        # scoresheets for consecutive rounds
+        if not create_scoresheets_second_rounds_bool:
+            if registrations['wcaId']:
+                comp_count = get_wca_competitor(registrations['wcaId'])['competition_count']
+                information.update(
+                        {
+                        'comp_count': comp_count, 
+                        'personal_bests': registrations['personalBests']
+                        }
+                    )
         if not registrations['wcaId']:
             information.update({'personId': ''})
         if registrations['registration']['status'] == 'accepted':
@@ -192,18 +233,17 @@ def get_registrations_from_wcif(wca_json, countries, create_scoresheets_second_r
                 competitor_information_wca.append(information)
             registration_id += 1
             
-    event_list_wca = sorted(collections.Counter(all_events))
-    return (competitor_information_wca, event_list_wca)
+    return competitor_information_wca
 
 # Parse information about event_id, round_number, # groups, format, cutoff, time limit and (possible) cumulative limits for each event
 def get_events_from_wcif(wca_json, event_dict):
     minimal_scramble_set_count = 1
-    event_counter_wca = 0
     group_list = []
     event_ids_wca = ()
+    all_events = ()
     event_info = []
     for wca_events in wca_json['events']:
-        event_counter_wca += 1
+        all_events += (wca_events['id'],)
         for wca_rounds in wca_events['rounds']:
             cutoff_number, cutoff, limit = 0, 0, 0
             advancing_competitors, advancing_competitors, cumulative = '', '', ''
@@ -255,7 +295,9 @@ def get_events_from_wcif(wca_json, event_dict):
             if wca_rounds['scrambleSetCount'] > minimal_scramble_set_count:
                 minimal_scramble_set_count = wca_rounds['scrambleSetCount'] 
     round_counter = collections.Counter(event_ids_wca)
-    return (event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count, round_counter)
+    event_list_wca = sorted(collections.Counter(all_events))
+    event_counter_wca = len(event_list_wca)
+    return (event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count, round_counter, event_list_wca)
 
 # Get schedule information from WCIF
 # Used for sorting of scrambler_list + creating a PDF containing the schedule

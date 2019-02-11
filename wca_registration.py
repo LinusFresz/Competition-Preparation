@@ -1,7 +1,6 @@
 ### Multiple functions to log in on the WCA website and catch all necessary competition and competitor registration information
 
 from modules import *
-from static import config as credentials
 
 ### Error handling for WCA website login errors
 def error_handling_wcif(competition_name, competition_page):
@@ -38,6 +37,8 @@ def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags
 # Get user input for wca login (mail-address, password and competition name)
 # All try-except cases were implemented for simple development and will not change the normal user input
 def wca_registration(new_creation):
+    print('')
+    print('To get the competition information (such as events and schedule), please enter your WCA login credentials.')
     while True:
         try:
             wca_mail = credentials.mail_address
@@ -90,6 +91,15 @@ def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stri
     error_handling_wcif(competition_name, competition_wcif_info.text)
     
     return competition_wcif_info.text
+    
+def get_wca_competitor(wca_id):
+    url = 'https://www.worldcubeassociation.org/api/v0/persons/' + wca_id
+    competitor_info = requests.get(url)    
+    try:
+        competitor_info = json.loads(competitor_info.text)
+    except KeyError:
+        print('Competitor ' + wca_id + 'not found.')
+    return competitor_info
 
 ### Cubecomps API
 # API to collect competitor information
@@ -106,7 +116,7 @@ def get_competitor_information_from_cubecomps(cubecomps_id, competition_name):
     cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}'.format(comp_id)
     cubecomps_api = requests.get(cubecomps_api_url).json()
             
-    if cubecomps_api['name'] != competition_name:
+    if cubecomps_api['name'] != competition_name and cubecomps_api['name'] != competition_name.replace(' ', ''):
         print('Cubecomps link does not match given competition name. Script uses fallback to registration ids from WCA website!')
         use_cubecomps_ids = False
     else:

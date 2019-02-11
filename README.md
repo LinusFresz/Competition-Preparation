@@ -16,14 +16,7 @@ This script was tested on Mac OS 10.13.4/10.14.1 with python 3.5.2 and 3.7.1
     
 ## Setup
 Make sure to add all event information in the 'Manage events' tab for your competition on the WCA website. Optional: fill in your schedule on the WCA competition website as well (advantages: scrambler list sorted by schedule and extra schedule pdf).
-    
-**Additional files needed**
-- Trebuchet.ttf ([TrueType font](https://www.fontpalace.com/font-download/Trebuchet+MS/))
-
-This must be downloaded and added to the same folder.
-    
-Please be aware that you need a WCA database connection. The credentials must be added to `static/config.py`. Else the script won't run.
-    
+         
 ### System setup
 
 - `pip install -r requirements.txt`

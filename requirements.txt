@@ -6,3 +6,5 @@ PyPDF2
 pymysql
 reportlab
 datetime
+pycountry
+tqdm
