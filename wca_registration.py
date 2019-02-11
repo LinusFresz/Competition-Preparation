@@ -61,7 +61,7 @@ def wca_registration(new_creation):
         try:
             competition_name = credentials.competition_name_input
         except:
-            competition_name = input('Competition name: ')
+            competition_name = input('Competition name or ID: ')
         create_competition_folder(competition_name)
         competition_name_stripped = competition_name.replace(' ', '')
         return (wca_password, wca_mail, competition_name, competition_name_stripped)
@@ -117,7 +117,7 @@ def get_competitor_information_from_cubecomps(cubecomps_id, competition_name):
     cubecomps_api = requests.get(cubecomps_api_url).json()
             
     if cubecomps_api['name'] != competition_name and cubecomps_api['name'] != competition_name.replace(' ', ''):
-        print('Cubecomps link does not match given competition name. Script uses fallback to registration ids from WCA website!')
+        print('Cubecomps link does not match given competition name/ID. Script uses fallback to registration ids from WCA website!')
         use_cubecomps_ids = False
     else:
         for competitor in cubecomps_api['competitors']:

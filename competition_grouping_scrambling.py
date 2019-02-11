@@ -102,7 +102,7 @@ if new_creation or create_only_nametags:
             scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
         
             print('Please enter cubecomps link to competition: (leave blank if not needed)')
-            print('If provided, the script will use registration ids from cubecomps for scoresheets. This ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!).')
+            print('If provided, the script will use registration ids from cubecomps for scoresheets. This ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!). The registrations from the competition must be uploaded to cubecomps before using this option.')
             cubecomps_id = input()
         if cubecomps_id:
             competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
@@ -137,7 +137,7 @@ if new_creation or create_only_nametags:
 # Create blank scoresheets
 elif blank_sheets:
     scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
-    competition_name = input('Competition name: (leave empty if not wanted) ')
+    competition_name = input('Competition name or ID: (leave empty if not wanted) ')
     blank_sheets_round_name = input('Round name: (leave empty if not needed) ')
 
 # Select grouping file if only nametags should be generated
@@ -148,7 +148,7 @@ elif reading_grouping_from_file_bool:
     wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(bool)
     scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
     if only_one_competitor:
-        scoresheet_competitor_name = input('Competitor Name: ')
+        scoresheet_competitor_name = input('Competitor name: ')
     file_name, grouping_file_name = competition_information_fetch(wca_info, True, False, new_creation)
     competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
@@ -225,14 +225,6 @@ if get_registration_information:
             wca_json, create_scoresheets_second_rounds_bool, \
             use_cubecomps_ids, competitors, competitors_api \
             )
-    
-    
-    #quit()
-    
-    
-    #event_list_wca = credentials.event_list_wca
-    #competitor_information_wca = credentials.competitor_information_wca
-    
     
     # Events
     event_ids_wca, group_list, event_info, event_counter_wca, minimal_scramble_set_count, round_counter, event_list_wca = get_events_from_wcif(wca_json, event_dict)
