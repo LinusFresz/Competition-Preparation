@@ -5,7 +5,7 @@
 ### Module import
 from modules import *
 from helpers.helpers import initiate_result_string, update_scrambler_list
-from wca_registration import get_file_name, competition_information_fetch, wca_registration, get_wca_info, get_information, get_competitor_information_from_cubecomps, get_round_information_from_cubecomps
+from wca_registration import get_file_name, competition_information_fetch, wca_registration, get_wca_info, get_information, get_competitor_information_from_cubecomps, get_round_information_from_cubecomps, get_wca_competitor
 from information_analysis import column_ids, formats, format_names, get_registration_from_file, get_registrations_from_wcif, get_events_from_wcif, get_schedule_from_wcif, get_events_per_day, get_competitor_events_per_day, prepare_registration_for_competitors, get_grouping_from_file
 from grouping_scrambling_functions import run_grouping_and_scrambling, update_event_ids, update_column_ids, sort_scrambler_by_schedule, get_competitor_results_from_wcif
 from pdf_file_generation import create_blank_sheets, create_scoresheets, create_scoresheets_second_rounds, create_registration_file, create_schedule_file, create_nametag_file, create_scrambling_file, create_grouping_file
@@ -148,7 +148,13 @@ elif reading_grouping_from_file_bool:
     wca_password, wca_mail, competition_name, competition_name_stripped = wca_registration(bool)
     scrambler_signature = get_information('Add scrambler signature field to scorecards? (y/n)')
     if only_one_competitor:
-        scoresheet_competitor_name = input('Competitor name: ')
+        scoresheet_competitor_name = input('Competitor name or WCA ID: ')
+        try:
+            scoresheet_competitor_api = get_wca_competitor(scoresheet_competitor_name)
+            if scoresheet_competitor_api:
+                scoresheet_competitor_name = scoresheet_competitor_api['person']['name']
+        except KeyError:
+            pass
     file_name, grouping_file_name = competition_information_fetch(wca_info, True, False, new_creation)
     competition_wcif_file = get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
@@ -223,7 +229,8 @@ if get_registration_information:
     # Registration
     competitor_information_wca = get_registrations_from_wcif(
             wca_json, create_scoresheets_second_rounds_bool, \
-            use_cubecomps_ids, competitors, competitors_api \
+            use_cubecomps_ids, competitors, competitors_api, \
+            only_one_competitor, scoresheet_competitor_name \
             )
     
     # Events

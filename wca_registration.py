@@ -91,14 +91,18 @@ def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stri
     error_handling_wcif(competition_name, competition_wcif_info.text)
     
     return competition_wcif_info.text
-    
+
+# Simple request to get information about one competitor
 def get_wca_competitor(wca_id):
     url = 'https://www.worldcubeassociation.org/api/v0/persons/' + wca_id
-    competitor_info = requests.get(url)    
+    competitor_info = ''
+    api_info = requests.get(url)
     try:
-        competitor_info = json.loads(competitor_info.text)
+        competitor_info = json.loads(api_info.text)
     except KeyError:
-        print('Competitor ' + wca_id + 'not found.')
+        pass
+    except json.decoder.JSONDecodeError:
+        pass
     return competitor_info
 
 ### Cubecomps API

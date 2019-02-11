@@ -1,11 +1,7 @@
 ### Data extraction of WCIF and registration file (if used).
 
-import pytz
-import datetime
-import ftfy
-import calendar
-import collections
-import csv
+from modules import *
+
 from helpers.helpers import format_minutes_and_seconds, enlarge_string, format_result
 from wca_registration import get_wca_competitor
 
@@ -137,7 +133,7 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
 
 ### WCA WCIF
 # Get competitor information: name, WCA ID, date of birth, gender, country, competition roles (organizer, delegate) and events registered for                
-def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool, use_cubecomps_ids, competitors, competitors_api):
+def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool, use_cubecomps_ids, competitors, competitors_api, only_one_competitor, scoresheet_competitor_name):
     registration_id = 1   
     competitor_information_wca = []
     
@@ -198,13 +194,22 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
         # scoresheets for consecutive rounds
         if not create_scoresheets_second_rounds_bool:
             if registrations['wcaId']:
-                comp_count = get_wca_competitor(registrations['wcaId'])['competition_count']
-                information.update(
-                        {
-                        'comp_count': comp_count, 
-                        'personal_bests': registrations['personalBests']
-                        }
-                    )
+                if not only_one_competitor:
+                    comp_count = get_wca_competitor(registrations['wcaId'])['competition_count']
+                    information.update(
+                            {
+                            'comp_count': comp_count,
+                            'personal_bests': registrations['personalBests']
+                            }
+                        )
+                if only_one_competitor and registrations['wcaId'] == scoresheet_competitor_name:
+                    comp_count = get_wca_competitor(registrations['wcaId'])['competition_count']
+                    information.update(
+                            {
+                            'comp_count': comp_count,
+                            'personal_bests': registrations['personalBests']
+                            }
+                        )
         if not registrations['wcaId']:
             information.update({'personId': ''})
         if registrations['registration']['status'] == 'accepted':
