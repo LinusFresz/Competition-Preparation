@@ -40,7 +40,7 @@ def wca_registration(new_creation):
     print('')
     print('To get the competition information (such as events and schedule), please enter your WCA login credentials.')
     while True:
-        wca_mail = input('Your WCA mail address: ')
+        wca_mail = "lfresz@worldcubeassociation.org" #input('Your WCA mail address: ')
         # Validation if correct mail address was entered
         if '@' not in wca_mail:
             if wca_mail[:4].isdigit() and wca_mail[8:].isdigit():
@@ -150,7 +150,7 @@ def wca_api(request_url, wca_mail, wca_password):
 # API to collect competitor information
 # Mostly used to update registration id for all competitors
 def get_competitor_information_from_cubecomps(cubecomps_id, competition_name):
-    cubecomps_id = 'http://cubecomps.com/live.php?cid{}'.format(cubecomps_id)
+    cubecomps_id = 'http://cubecomps.com/live.php?cid={}'.format(cubecomps_id)
     competitors_api = []
     try:
         cubecomps_id.split('?')[1].split('&')[0].split('=')[1]
@@ -201,14 +201,41 @@ def get_round_information_from_cubecomps(cubecomps_id):
 def split_cubecomps_id(cubecomps_id, ind1, ind2, ind3):
     return cubecomps_id.split('?')[ind1].split('&')[ind2].split('=')[ind3]
     
+# Get all competitions from cubecomps
 def get_cubecomps_competitions():
     url = 'https://m.cubecomps.com/api/v1/competitions'
     url_past = 'https://m.cubecomps.com/api/v1/competitions/past'
     current_competitions = requests.get(url).json()
     past_competitions = requests.get(url_past).json()
-    z = current_competitions.copy()
-    z.update(past_competitions)
-    return z
+    compbined_competitions = current_competitions.copy()
+    compbined_competitions.update(past_competitions)
+    return compbined_competitions
+
+# Find cubecomps competition
+def get_cubecomps_competition(create_only_nametags, competition_name, competition_name_stripped):
+    cubecomps_id = ''
+    competitors_api = []
+    use_cubecomps_ids = False
+    
+    if not create_only_nametags:    
+        competitions_cubecomps = get_cubecomps_competitions()
+        for dates in competitions_cubecomps: 
+            for competition in competitions_cubecomps[dates]:
+                if competition_name_stripped[:-4] == competition['name'].replace(' ', '') and competition_name_stripped[-4:] in competition['date']:
+                    cubecomps_id = competition['id']
+                    break
+    if cubecomps_id:
+        competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
+        if not competitors_api:
+            use_cubecomps_ids = False
+            print('INFO! The competition was found on cubecomps. However, no registration information was uploaded. Uploading them before using this script ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!).')
+        else:
+            print('')
+            print('INFO! Script found registration information on cubecomps.com. These registration ids will be used for scoresheets.')
+            print('')
+    else:
+        print('INFO! Competition was not found on cubecomps. Using this script and upload registration information afterwards might cause faulty registration ids on scoresheets. Use on own risk.')
+    return (competitors_api, cubecomps_id, use_cubecomps_ids) 
 
 # Return if certain information should be used or not (by using y/n choice)
 def get_information(information_string):
@@ -218,7 +245,7 @@ def get_information(information_string):
         if input_information.upper() in ('N', 'Y'):
             break
         else:
-            print("Wrong input, please enter 'y' or 'n'.")
+            print('Wrong input, please enter \'y\' or \'n\'.')
             print('')
 
     if input_information.upper() == 'Y':

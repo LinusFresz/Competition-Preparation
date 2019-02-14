@@ -85,7 +85,7 @@ while True:
             print('Quitting programm.')
             sys.exit()
 
-    print("Wrong input, please enter one of the available options.\n")
+    print('Wrong input, please enter one of the available options.\n')
 
 ### Evaluation of script selection and initialization
 # Get necessary information for new competition
@@ -98,26 +98,11 @@ if new_creation or create_only_nametags:
         two_sided_nametags = apis.get_information('Create two-sided nametags? (grouping (and scrambling) information on the back) (y/n)')
         if two_sided_nametags:
             print('Using WCA registration and event information.')
+            
+        competitors_api, cubecomps_id, use_cubecomps_ids = apis.get_cubecomps_competition(create_only_nametags, competition_name, competition_name_stripped)
+            
         if not create_only_nametags:
             scrambler_signature = apis.get_information('Add scrambler signature field to scorecards? (y/n)')
-
-            competitions_cubecomps = apis.get_cubecomps_competitions()
-            for dates in competitions_cubecomps: 
-                for competition in competitions_cubecomps[dates]:
-                    if competition_name_stripped[:-4] == competition['name'].replace(' ', '') and competition_name_stripped[-4:] in competition['date']:
-                        cubecomps_id = competition['id']
-                        break
-        if cubecomps_id:
-            competitors_api, use_cubecomps_ids = apis.get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
-            if not competitors_api:
-                use_cubecomps_ids = False
-                print('')
-                print('The competition was found on cubecomps. However, no registration information was uploaded. Uploading them before using this script ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!). Otherwise, use at own risk.')
-                print('')   
-        else:
-            print('')
-            print('Competition was not found on cubecomps. Using this script and upload registration information afterwards might cause faulty registration ids on scoresheets. Use on own risk.')
-            print('')
 
     if create_only_nametags and not two_sided_nametags and not wca_info:
         get_registration_information = False
@@ -130,7 +115,7 @@ if new_creation or create_only_nametags:
             if nametag_scrambling.upper() in ('N', 'Y'):
                 break
             else:
-                print("Wrong input, please enter 'y' or 'n'.")
+                print('Wrong input, please enter \'y\' or \'n\'.')
                 print('')
 
         if nametag_scrambling.upper() == 'Y':
@@ -169,27 +154,8 @@ elif reading_grouping_from_file_bool:
             pass
     file_name, grouping_file_name = apis.competition_information_fetch(wca_info, True, False, new_creation)
     competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
-
-    if not create_only_nametags:    
-        competitions_cubecomps = apis.get_cubecomps_competitions()
-        for dates in competitions_cubecomps: 
-            for competition in competitions_cubecomps[dates]:
-                if competition_name_stripped[:-4] == competition['name'].replace(' ', '') and competition_name_stripped[-4:] in competition['date']:
-                    cubecomps_id = competition['id']
-                    break
-    if cubecomps_id:
-        competitors_api, use_cubecomps_ids = apis.get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
-        if not competitors_api:
-            use_cubecomps_ids = False
-            print('The competition was found on cubecomps. However, no registration information was uploaded. Uploading them before using this script ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!).')
-    else:
-        print('Competition was not found on cubecomps. Using this script and upload registration information afterwards might cause faulty registration ids on scoresheets. Use on own risk.')
-        '''
-        print('Please enter cubecomps link to competition: (leave blank if not needed)')
-        cubecomps_id = input()
-    if cubecomps_id:
-        competitors_api, use_cubecomps_ids = apis.get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
-        '''
+    
+    competitors_api, cubecomps_id, use_cubecomps_ids = apis.get_cubecomps_competition(create_only_nametags, competition_name, competition_name_stripped)
 
 # Create schedule from wca website information
 elif create_only_schedule:
