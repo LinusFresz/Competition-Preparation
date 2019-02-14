@@ -150,6 +150,7 @@ def wca_api(request_url, wca_mail, wca_password):
 # API to collect competitor information
 # Mostly used to update registration id for all competitors
 def get_competitor_information_from_cubecomps(cubecomps_id, competition_name):
+    cubecomps_id = 'http://cubecomps.com/live.php?cid{}'.format(cubecomps_id)
     competitors_api = []
     try:
         cubecomps_id.split('?')[1].split('&')[0].split('=')[1]
@@ -199,6 +200,15 @@ def get_round_information_from_cubecomps(cubecomps_id):
 
 def split_cubecomps_id(cubecomps_id, ind1, ind2, ind3):
     return cubecomps_id.split('?')[ind1].split('&')[ind2].split('=')[ind3]
+    
+def get_cubecomps_competitions():
+    url = 'https://m.cubecomps.com/api/v1/competitions'
+    url_past = 'https://m.cubecomps.com/api/v1/competitions/past'
+    current_competitions = requests.get(url).json()
+    past_competitions = requests.get(url_past).json()
+    z = current_competitions.copy()
+    z.update(past_competitions)
+    return z
 
 # Return if certain information should be used or not (by using y/n choice)
 def get_information(information_string):
