@@ -40,7 +40,7 @@ def wca_registration(new_creation):
     print('')
     print('To get the competition information (such as events and schedule), please enter your WCA login credentials.')
     while True:
-        wca_mail = "lfresz@worldcubeassociation.org" #input('Your WCA mail address: ')
+        wca_mail = input('Your WCA mail address: ')
         # Validation if correct mail address was entered
         if '@' not in wca_mail:
             if wca_mail[:4].isdigit() and wca_mail[8:].isdigit():
