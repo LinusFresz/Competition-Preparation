@@ -8,22 +8,20 @@ def error_handling_wcif(competition_name, competition_page):
     if 'Not logged in' in competition_page:
         print('ERROR!!')
         print('While logging into WCA website, either WCA ID or password was wrong. Aborted script, please retry.')
-        sys.exit()
     elif 'Competition with id' in competition_page:
         print('ERROR!!')
         print('Competition with name {} not found on WCA website.'.format(competition_name))
-        sys.exit()
     elif 'Not authorized to manage' in competition_page:
         print('ERROR!!')
         print('You are not authorized to manage this competition. Please only select your competitions.')
-        sys.exit()
     elif "The page you were looking for doesn't exist." in competition_page:
         print('ERROR!!')
         print('Misstiped competition link, please enter correct link.')
-        sys.exit()
     else:
         if not os.path.exists(competition_name_stripped):
             os.makedirs(competition_name_stripped)
+        return None
+    sys.exit()
 
 ### Functions for handling WCA website related operations
 # Get file names for registration and grouping file if only scoresheets or nametags are created
