@@ -4,6 +4,7 @@ from modules import *
 
 ### Error handling for WCA website login errors
 def error_handling_wcif(competition_name, competition_page):
+    competition_name_stripped = competition_name.replace(' ', '')
     if 'Not logged in' in competition_page:
         print('ERROR!!')
         print('While logging into WCA website, either WCA ID or password was wrong. Aborted script, please retry.')
@@ -21,8 +22,8 @@ def error_handling_wcif(competition_name, competition_page):
         print('Misstiped competition link, please enter correct link.')
         sys.exit()
     else:
-        if not os.path.exists(competition_name):
-            os.makedirs(competition_name)
+        if not os.path.exists(competition_name_stripped):
+            os.makedirs(competition_name_stripped)
 
 ### Functions for handling WCA website related operations
 # Get file names for registration and grouping file if only scoresheets or nametags are created
@@ -228,13 +229,17 @@ def get_cubecomps_competition(create_only_nametags, competition_name, competitio
         competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
         if not competitors_api:
             use_cubecomps_ids = False
+            print('')
             print('INFO! The competition was found on cubecomps. However, no registration information was uploaded. Uploading them before using this script ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!).')
+            print('')
         else:
             print('')
             print('INFO! Script found registration information on cubecomps.com. These registration ids will be used for scoresheets.')
             print('')
     else:
+        print('')
         print('INFO! Competition was not found on cubecomps. Using this script and upload registration information afterwards might cause faulty registration ids on scoresheets. Use on own risk.')
+        print('')
     return (competitors_api, cubecomps_id, use_cubecomps_ids) 
 
 # Return if certain information should be used or not (by using y/n choice)
@@ -270,5 +275,6 @@ def get_file_name(id):
         return file_name_csv
 
 def create_competition_folder(competition_name):
-    if not os.path.exists(competition_name):
-        os.makedirs(competition_name)
+    competition_name_stripped = competition_name.replace(' ', '')
+    if not os.path.exists(competition_name_stripped):
+        os.makedirs(competition_name_stripped)

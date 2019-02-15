@@ -310,7 +310,7 @@ elif create_schedule:
 if create_registration_file_bool:
     print('')
     print('Create registration file...')
-    output_registration = '{}/{}Registration.csv'.format(competition_name, competition_name_stripped)
+    output_registration = '{}/{}Registration.csv'.format(competition_name_stripped, competition_name_stripped)
     pdf_files.create_registration_file(output_registration, registration_list, analysis.column_ids)
 
     print('Registration file successfully created.')
@@ -395,8 +395,8 @@ if reading_scrambling_list_from_file:
 if new_creation or blank_sheets or create_only_nametags:
     print('')
     print('Create nametags...')
-    output_scrambling = '{}/{}Scrambling.csv'.format(competition_name, competition_name_stripped)
-    output_grouping = '{}/{}Grouping.csv'.format(competition_name, competition_name_stripped)
+    output_scrambling = '{}/{}Scrambling.csv'.format(competition_name_stripped, competition_name_stripped)
+    output_grouping = '{}/{}Grouping.csv'.format(competition_name_stripped, competition_name_stripped)
     
     # Nametag file
     sheet = pdf_files.create_nametag_file(
@@ -443,5 +443,5 @@ if new_creation or reading_grouping_from_file_bool:
         print('')
         print('No errors while creating files.')
 
-    print('Please see folder {} for files.'.format(competition_name))
+    print('Please see folder {} for files.'.format(competition_name_stripped))
     print('')

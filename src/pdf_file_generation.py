@@ -18,12 +18,13 @@ import helpers.scoresheet_helpers as helper_scoresheets
 ### PDF splitter and merger
 # Both are used for twosided nametags
 def pdf_splitter(path, competition_name):
+    competition_name_stripped = competition_name.replace(' ', '')
     fname = os.path.splitext(os.path.basename(path))[0]
     pdf = PdfFileReader(path)
     for page in range(pdf.getNumPages()):
         pdf_writer = PdfFileWriter()
         pdf_writer.addPage(pdf.getPage(page))
-        output_filename = '{}/{}_page_{}.pdf'.format(competition_name, fname, page+1)
+        output_filename = '{}/{}_page_{}.pdf'.format(competition_name_stripped, fname, page+1)
         with open(output_filename, 'wb') as out:
             pdf_writer.write(out)
 
@@ -65,7 +66,7 @@ def create_schedule_file(competition_name, competition_name_stripped, full_sched
     specs_scoresheets = labels.Specification(210, 297, 1, 1, 210, 297)
     
     sheet = labels.Sheet(specs_scoresheets, write_schedule, border=False)
-    schedule_file = '{}/{}Schedule.pdf'.format(competition_name, competition_name_stripped)
+    schedule_file = '{}/{}Schedule.pdf'.format(competition_name_stripped, competition_name_stripped)
     
     sheet.add_labels((competition_name, competition_name_stripped, full_schedule, event_info, competition_days, competition_start_day, schedule_day, timezone_utc_offset, formats, format_names, round_counter) for schedule_day in range(competition_days))
     sheet.save(schedule_file)
@@ -77,7 +78,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
     competitor_information_nametags = sorted(competitor_information, key=lambda x: ftfy.fix_text(x['name']))
     sheet = labels.Sheet(specs, write_name, border=True)
     sheet.add_labels((name, competition_name) for name in competitor_information_nametags)
-    nametag_file = '{}/{}Nametags.pdf'.format(competition_name, competition_name_stripped)
+    nametag_file = '{}/{}Nametags.pdf'.format(competition_name_stripped, competition_name_stripped)
     sheet.save(nametag_file)
 
     if two_sided_nametags:
@@ -100,14 +101,14 @@ def create_nametag_file(competitor_information, competition_name, competition_na
                 result_string_nametags[person] = swapping_person
         sheet = labels.Sheet(specs, write_grouping, border=True)
         sheet.add_labels((name, result_string_nametags, event_ids, scrambler_list, event_dict, round_counter, group_list) for name in result_string_nametags)
-        grouping_nametag_file = '{}/{}-nametags-grouping.pdf'.format(competition_name, competition_name_stripped)
+        grouping_nametag_file = '{}/{}-nametags-grouping.pdf'.format(competition_name_stripped, competition_name_stripped)
         sheet.save(grouping_nametag_file)
 
         pdf_splitter(grouping_nametag_file, competition_name)
         pdf_splitter(nametag_file, competition_name)
 
-        paths1 = glob.glob('{}/{}Nametags_*.pdf'.format(competition_name, competition_name_stripped))
-        paths2 = glob.glob('{}/{}-nametags-grouping_*.pdf'.format(competition_name, competition_name_stripped))
+        paths1 = glob.glob('{}/{}Nametags_*.pdf'.format(competition_name_stripped, competition_name_stripped))
+        paths2 = glob.glob('{}/{}-nametags-grouping_*.pdf'.format(competition_name_stripped, competition_name_stripped))
         paths = paths1 + paths2
         paths = sorted(paths, key=lambda x: x.split('_')[2])
 
@@ -170,7 +171,7 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
     # Format information for scoresheets: usual DIN-A4 layout with 2 rows of 2 scoresheets each with a size of 100x130mm
     specs_scoresheets = labels.Specification(210, 297, 2, 2, 100, 130)
     sheet = labels.Sheet(specs_scoresheets, write_scoresheets, border=False)
-    scoresheet_file = '{}/{}Scoresheets.pdf'.format(competition_name, competition_name_stripped) 
+    scoresheet_file = '{}/{}Scoresheets.pdf'.format(competition_name_stripped, competition_name_stripped)
 
     for event in tqdm.tqdm(event_info):
         if event['event'] != '333fm' and event['round'] == '1':
@@ -192,7 +193,7 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
             sheet.add_labels((name, event_ids, event_dict, round_counter, competitor_information, competition_name, event, scrambler_signature) for name in scoresheet_list)
             
     if only_one_competitor:
-        scoresheet_file = '{}/{}Scoresheets{}.pdf'.format(competition_name, competition_name_stripped, scoresheet_competitor_name.replace(' ', ''))
+        scoresheet_file = '{}/{}Scoresheets{}.pdf'.format(competition_name_stripped, competition_name_stripped, scoresheet_competitor_name.replace(' ', ''))
     sheet.save(scoresheet_file)
 
 def create_scoresheets_second_rounds(competition_name, competitor_information, advancing_competitors, event_round_name, event_info, event_2, next_round_name, scrambler_signature):
@@ -206,13 +207,14 @@ def create_scoresheets_second_rounds(competition_name, competitor_information, a
         for filling in range(0,(4-len(competitor_information))%4):
             competitor_information.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
                 
+    competition_name_stripped = competition_name.replace(' ', '')
     # Create scoresheets
     sheet.add_labels((name, event_info, event_2, next_round_name, event_round_name, competition_name, scrambler_signature) for name in competitor_information)
-    scoresheet_file = '{}/Scoresheets{}.pdf'.format(competition_name, event_round_name)
+    scoresheet_file = '{}/Scoresheets{}.pdf'.format(competition_name_stripped, event_round_name)
     sheet.save(scoresheet_file)
     
     print('')
-    print('Scoresheets for {} sucessfully saved in folder {}.'.format(event_round_name, competition_name))
+    print('Scoresheets for {} sucessfully saved in folder {}.'.format(event_round_name, competition_name_stripped))
     sys.exit()
 
 ### Writer functions
