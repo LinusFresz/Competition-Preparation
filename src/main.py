@@ -125,7 +125,7 @@ if new_creation or create_only_nametags:
     file_name, grouping_file_name = apis.competition_information_fetch(wca_info, False, create_only_nametags and two_sided_nametags, new_creation)
 
     if create_only_nametags and not two_sided_nametags and not wca_info:
-        True
+        pass
     else:
         competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
@@ -169,7 +169,6 @@ elif create_only_schedule:
     two_sided_nametags = False
     
     file_name, grouping_file_name = apis.competition_information_fetch(wca_info, False, two_sided_nametags, new_creation)
-    
     competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
 
 # Create scoresheets for seconds rounds by using cubecomps.com information

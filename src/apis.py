@@ -136,6 +136,9 @@ def wca_api(request_url, wca_mail, wca_password):
     wca_request_token = requests.post(grant_url, data=wca_headers)
     try:
         wca_access_token = json.loads(wca_request_token.text)['access_token']
+        with open('.secret', 'w') as secret:
+            print(wca_access_token, file=secret)
+            
     except KeyError:
         print('ERROR!! Failed to get competition information.\n\n Given error message: {}\n Message:{}\n\nScript aborted.'.format(json.loads(wca_request_token.text)['error'], json.loads(wca_request_token.text)['error_description']))
         sys.exit()
@@ -195,6 +198,7 @@ def get_round_information_from_cubecomps(cubecomps_id):
         if competitor['top_position']:
             advancing_competitors_next_round += 1
             competitors_api.append({'name': competitor['name'], 'competitor_id': int(competitor['competitor_id']), 'ranking': int(competitor['position'])})
+            
     return(cubecomps_api, competitors_api, event_round_name, advancing_competitors_next_round, competition_name, competition_name_stripped)
 
 def split_cubecomps_id(cubecomps_id, ind1, ind2, ind3):

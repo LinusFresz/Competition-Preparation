@@ -206,10 +206,22 @@ def create_scoresheets_second_rounds(competition_name, competitor_information, a
     if (advancing_competitors % 4) != 0:
         for filling in range(0,(4-len(competitor_information))%4):
             competitor_information.append({'name': '', 'country': '', 'personId': '', 'registrationId': ''})
-                
+    
+    #print(int(len(competitor_information) / 4))
+    
+    sorted_competitor_information = [None] * (int(len(competitor_information)) + 4)
+    counter = 0
+    shift = 0
+    for competitor in range(0, int(len(competitor_information))):
+        sorted_competitor_information[4 * counter + shift] = competitor_information[competitor]
+        counter += 1
+        if counter == int(len(competitor_information) / 4):
+            shift += 1
+            counter = 0
+    
     competition_name_stripped = competition_name.replace(' ', '')
     # Create scoresheets
-    sheet.add_labels((name, event_info, event_2, next_round_name, event_round_name, competition_name, scrambler_signature) for name in competitor_information)
+    sheet.add_labels((name, event_info, event_2, next_round_name, event_round_name, competition_name, scrambler_signature) for name in sorted_competitor_information if name is not None)
     scoresheet_file = '{}/Scoresheets{}.pdf'.format(competition_name_stripped, event_round_name)
     sheet.save(scoresheet_file)
     
