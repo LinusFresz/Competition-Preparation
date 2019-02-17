@@ -113,7 +113,7 @@ def select_scrambler(event, round_number, round_id, scrambler_count, first_place
     for group_number in range(1, groups + 1):
         exists = False
         for scrambler in range(0, len(scrambler_list)):
-            if scrambler_list[scrambler][0] == round_id  and scrambler_list[scrambler][1] == groups:
+            if scrambler_list[scrambler][0] == round_id  and scrambler_list[scrambler][1] == group_number:
                 scrambler_list[scrambler] = [round_id, group_number]
                 exists = True
         if not exists:
