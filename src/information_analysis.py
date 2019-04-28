@@ -23,7 +23,7 @@ format_names = {
         }
 
 ### Get registration from file if WCA registration is not used
-def get_registration_from_file(file_name, new_creation, reading_grouping_from_file, use_csv_registration_file, column_ids, competitor_information_wca, competitors):
+def get_registration_from_file(wca_json, file_name, new_creation, reading_grouping_from_file, use_csv_registration_file, column_ids, competitor_information_wca, competitors, use_cubecomps_ids, competitors_api):
     file = open(file_name)
     all_data = []
     wca_ids, event_list = (), ()
@@ -52,6 +52,11 @@ def get_registration_from_file(file_name, new_creation, reading_grouping_from_fi
             else:
                 all_data.append(row_list)
                 role = ''
+                for orga in wca_json['persons']:
+                    if ftfy.fix_text(row_list[1]) == ftfy.fix_text(orga['name']) and orga['roles']:
+                        for orga_role in orga['roles']:
+                            role = ''.join([role, orga_role.replace('delegate', 'WCA DELEGATE').upper(), ', '])
+                        role = role[:-2]
                 if use_csv_registration_file:
                     if row_list[3]:
                         for person in competitor_information_wca:
@@ -92,6 +97,15 @@ def get_registration_from_file(file_name, new_creation, reading_grouping_from_fi
                         'average': '0.00'
                         }
                     )
+
+                if use_cubecomps_ids:
+                    for comp in competitors_api:
+                        if row_list[1].split(' (')[0].strip() == ftfy.fix_text(comp['name']).split(' (')[0]:
+                            competitor_information[-1].update(
+                                        {
+                                        'registration_id': comp['competitor_id']
+                                        }
+                                    )
                 if row_list[3]:
                     wca_ids += (str(row_list[3]),)
                 registration_id += 1
@@ -193,7 +207,7 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
         # Make this exception to use WCA /persons API only if needed (i.e. for everything except 
         # scoresheets for consecutive rounds
         if not create_scoresheets_second_rounds_bool:
-            if registrations['wcaId']:
+            if registrations['wcaId'] and registrations['registration']['status'] == 'accepted':
                 if not only_one_competitor:
                     comp_count = apis.get_wca_competitor(registrations['wcaId'])['competition_count']
                     information.update(

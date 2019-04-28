@@ -64,7 +64,7 @@ def wca_registration(new_creation):
             competition_name = input('Competition name or ID: ')
             if competition_name.isdigit():
                 if int(competition_name) < len(upcoming_competitions):
-                    competition_name = upcoming_competitions[int(competition_name)-1]['name']
+                    competition_name = upcoming_competitions[int(competition_name)-1]['name'].replace('-', ' ')
                     not_valid_competition_name = False
                 else:
                     print('Wrong input, please select number or enter competition name.')
@@ -235,6 +235,7 @@ def get_cubecomps_competition(create_only_nametags, competition_name, competitio
             print('INFO! The competition was found on cubecomps. However, no registration information was uploaded. Uploading them before using this script ensures to have matching ids on all scoresheets and in cubecomps (which eases scoretaking a lot!).')
             print('')
         else:
+            use_cubecomps_ids = True
             print('')
             print('INFO! Script found registration information on cubecomps.com. These registration ids will be used for scoresheets.')
             print('')

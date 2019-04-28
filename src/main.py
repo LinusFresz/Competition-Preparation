@@ -173,6 +173,7 @@ elif create_only_schedule:
 
 # Create scoresheets for seconds rounds by using cubecomps.com information
 elif create_scoresheets_second_rounds_bool:
+    use_cubecomps_ids = True
     cubecomps_id = input('Link to previous round: ')
     cubecomps_api, competitors, event_round_name, advancing_competitors_next_round, competition_name, competition_name_stripped = apis.get_round_information_from_cubecomps(cubecomps_id)
     
@@ -265,7 +266,9 @@ if get_registration_information:
     if not wca_info:
         print('Open registration file...')
         use_csv_registration_file = True
-        analysis.column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = analysis.get_registration_from_file(file_name, new_creation, reading_grouping_from_file_bool, use_csv_registration_file, analysis.column_ids, competitor_information_wca, competitors)
+        if not competitors_api:
+            competitors_api = competitors
+        analysis.column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = analysis.get_registration_from_file(wca_json, file_name, new_creation, reading_grouping_from_file_bool, use_csv_registration_file, analysis.column_ids, competitor_information_wca, competitors, use_cubecomps_ids, competitors_api)
 
         registration_list = sorted(sorted(all_data, key= lambda x: x[1]), key=lambda x: x[1].split()[-1])
         
@@ -279,7 +282,7 @@ if get_registration_information:
 ### Parse registration file
 if read_only_registration_file:
     use_csv_registration_file = False
-    analysis.column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = analysis.get_registration_from_file(file_name, new_creation, reading_grouping_from_file_bool, use_csv_registration_file, analysis.column_ids, event_counter, competitor_information_wca, competitors)
+    analysis.column_ids, event_list, event_counter, competitor_information, all_data, wca_ids = analysis.get_registration_from_file(wca_json, file_name, new_creation, reading_grouping_from_file_bool, use_csv_registration_file, analysis.column_ids, event_counter, competitor_information_wca, competitors, use_cubecomps_ids, competitors_api)
 
 ### Create schedule (if exists on WCA website)
 if create_schedule and full_schedule:
