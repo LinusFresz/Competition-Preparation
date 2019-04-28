@@ -308,7 +308,6 @@ def get_events_from_wcif(wca_json, event_dict):
 # Used for sorting of scrambler_list + creating a PDF containing the schedule
 def get_schedule_from_wcif(wca_json):
     full_schedule, events_per_day, competing_day = [], [], []
-    offset_second_day = False
     if wca_json['schedule']['venues']:   
         timezone_competition = wca_json['schedule']['venues'][0]['timezone']
         competition_days = wca_json['schedule']['numberOfDays']
@@ -321,11 +320,6 @@ def get_schedule_from_wcif(wca_json):
             if schedule_events['name'][-1:].isdigit():
                 schedule_round_id = str(schedule_events['name'][-1:])
             schedule_event_start_utc = schedule_events['startTime']
-            
-            # Hard coded fix for time savings change in Europe at the end of March
-            if "03-31" in schedule_event_start_utc and not offset_second_day and "Berlin" in timezone_competition:
-                timezone_utc_offset += 1
-                offset_second_day = True
             
             if not full_schedule:
                 timezone_localize = pytz.timezone(timezone_competition)
