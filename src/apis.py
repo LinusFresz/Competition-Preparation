@@ -163,8 +163,8 @@ def get_competitor_information_from_cubecomps(cubecomps_id, competition_name):
     comp_id = split_cubecomps_id(cubecomps_id, 1, 0, 1)
     cubecomps_api_url = 'https://m.cubecomps.com/api/v1/competitions/{}'.format(comp_id)
     cubecomps_api = requests.get(cubecomps_api_url).json()
-            
-    if cubecomps_api['name'] != competition_name and cubecomps_api['name'] != competition_name.replace(' ', ''):
+
+    if cubecomps_api['name'].replace('-', ' ') != competition_name and cubecomps_api['name'].replace('-', '') != competition_name.replace(' ', '').replace('-', ' '):
         print('Cubecomps link does not match given competition name/ID. Script uses fallback to registration ids from WCA website!')
         use_cubecomps_ids = False
     else:
@@ -224,8 +224,8 @@ def get_cubecomps_competition(create_only_nametags, competition_name, competitio
         competitions_cubecomps = get_cubecomps_competitions()
         for dates in competitions_cubecomps: 
             for competition in competitions_cubecomps[dates]:
-                if competition_name_stripped[:-4] == competition['name'].replace(' ', '') and competition_name_stripped[-4:] in competition['date']:
-                    cubecomps_id = competition['id']
+                if competition_name_stripped[:-4] == competition['name'].replace(' ', '').replace('-', '') and competition_name_stripped[-4:] in competition['date']:
+                    cubecomps_id = competition['id'].replace('-', '')
                     break
     if cubecomps_id:
         competitors_api, use_cubecomps_ids = get_competitor_information_from_cubecomps(cubecomps_id, competition_name)
