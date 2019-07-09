@@ -32,7 +32,6 @@ def merger(output_path, input_paths):
     pdf_merger = PdfFileMerger()
     for path in input_paths:
         pdf_merger.append(path)
-        path.close()
         os.remove(path)
     with open(output_path, 'wb') as fileobj:
         pdf_merger.write(fileobj)
