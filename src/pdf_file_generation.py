@@ -32,6 +32,7 @@ def merger(output_path, input_paths):
     pdf_merger = PdfFileMerger()
     for path in input_paths:
         pdf_merger.append(path)
+        path.close()
         os.remove(path)
     with open(output_path, 'wb') as fileobj:
         pdf_merger.write(fileobj)
@@ -122,7 +123,7 @@ def create_nametag_file(competitor_information, competition_name, competition_na
     return sheet
     
 def create_grouping_file(output_grouping, event_ids, event_dict, result_string):
-    with open(output_grouping, 'w') as grouping_file:
+    with open(output_grouping, 'w', encoding="utf-8") as grouping_file:
         header = ',Name'
         all_events = ('333', '222', '444', '555', '666', '777', '333bf', '333fm', '333oh', '333ft', 'minx', 'pyram', 'clock', 'skewb', 'sq1', '444bf', '555bf', '333mbf')
         for event in all_events:
@@ -140,7 +141,7 @@ def create_grouping_file(output_grouping, event_ids, event_dict, result_string):
             print(grouping_list, file = grouping_file)
             
 def create_scrambling_file(output_scrambling, competition_name, scrambler_list):
-    with open(output_scrambling, 'w') as scrambling_file:
+    with open(output_scrambling, 'w', encoding="utf-8") as scrambling_file:
         header = 'Event,Group,Scrambler 1,Scrambler 2,Scrambler 3,Scrambler 4,Scrambler 5'
 
         print('Scrambling List {}'.format(competition_name), file = scrambling_file)
