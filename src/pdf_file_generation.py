@@ -38,7 +38,7 @@ def merger(output_path, input_paths):
 
 ### Functions to create different files: registration, schedule, nametags, grouping, scrambling, scoresheets
 def create_registration_file(output_registration, registration_list, column_ids):
-    with open(output_registration, 'w') as registration_file:
+    with open(output_registration, 'w', encoding="utf-8") as registration_file:
         if isinstance(registration_list[0][len(registration_list[0]) - 1], str):
             print('Name, Country, WCA ID, Date of Birth, Gender, Guests, Comment', file=registration_file)
         else:
