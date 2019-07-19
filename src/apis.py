@@ -108,6 +108,28 @@ def get_wca_competitor(wca_id):
         pass
     return competitor_info
 
+# The WCA API provides the option to get up to 100 WCA at the same time. This improves performance a lot.
+def get_wca_competitors(wca_ids):
+    competitors_info = []
+    
+    # Split WCA IDs up into batches of 100 each time and request information from WCA API
+    for competitors in range(0,math.ceil(len(wca_ids)/100)):
+        wca_ids_partial = wca_ids[competitors*100:(competitors+1)*100]
+        url = 'https://www.worldcubeassociation.org/api/v0/persons?wca_ids={}&per_page=150'.format(','.join(wca_ids_partial))
+    
+        api_info = requests.get(url)
+
+        try:
+            competitors_info.extend(json.loads(api_info.text))
+        except KeyError:
+            print('ERROR! Something went wrong while communication with the WCA website, please restart script.')
+            sys.exit()
+        except json.decoder.JSONDecodeError:
+            print('ERROR! Something went wrong while communication with the WCA website, please restart script.')
+            sys.exit()
+
+    return competitors_info
+
 # Simple request to get information about input competition name
 def get_wca_competition(competition_name):
     url = 'https://www.worldcubeassociation.org/api/v0/competitions/{}'.format(competition_name.replace(' ', ''))
@@ -138,7 +160,6 @@ def wca_api(request_url, wca_mail, wca_password):
         wca_access_token = json.loads(wca_request_token.text)['access_token']
         with open('.secret', 'w') as secret:
             print(wca_access_token, file=secret)
-            
     except KeyError:
         print('ERROR!! Failed to get competition information.\n\n Given error message: {}\n Message:{}\n\nScript aborted.'.format(json.loads(wca_request_token.text)['error'], json.loads(wca_request_token.text)['error_description']))
         sys.exit()
@@ -248,6 +269,7 @@ def get_cubecomps_competition(create_only_nametags, competition_name, competitio
 # Return if certain information should be used or not (by using y/n choice)
 def get_information(information_string):
     print(information_string)
+
     while True:
         input_information = input('')
         if input_information.upper() in ('N', 'Y'):

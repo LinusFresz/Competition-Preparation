@@ -505,7 +505,7 @@ def write_schedule(label, width, height, information):
                         round_format += ' ({} proceed)'.format(events['advancing'])
             if not 'Attempt' in event['event_name']:
                 round_number = event['event_name'][-1:]
-            else:
+            elif event['event_id'] != 'other':
                 round_number = event['event_name'].split(' - ')[1][-1:]
             if round_number == str(round_counter[event['event_id']]) or round_number == '3':
                 replace_string = ' Round {}'.format(str(round_number))

@@ -364,6 +364,9 @@ def sort_scrambler_by_schedule(full_schedule, scrambler_list, round_counter):
 def get_competitor_results_from_wcif(event_list, wca_ids, competitor_information, create_only_nametags, wca_info):
     ranking_single = []
     competition_count = []
+    
+    if not wca_info:
+        wca_api_competitors = apis.get_wca_competitors(wca_ids)
 
     for person in tqdm.tqdm(competitor_information):
         comp_count = 0
@@ -371,8 +374,12 @@ def get_competitor_results_from_wcif(event_list, wca_ids, competitor_information
         average_result = '0.00'
         if not wca_info:
             if person['personId']:
-                wca_api_competitor = apis.get_wca_competitor(person['personId'])
-                comp_count = wca_api_competitor['competition_count']
+                for competitor in wca_api_competitors:
+                    if person['personId'] == competitor['person']['wca_id']:
+                        comp_count = competitor['competition_count']
+                        wca_api_competitor = competitor
+                        break
+
                 for event_records in wca_api_competitor['personal_records']:
                     ranking_single.append({'personId': person['personId'], 'eventId': event_records, 'best': wca_api_competitor['personal_records'][event_records]['single']['best']})
                     # Add 3x3x3 results and competition count to competitor information for nametags

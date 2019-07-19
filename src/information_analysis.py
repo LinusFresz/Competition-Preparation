@@ -161,6 +161,11 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
         
     with open('src/data/WCA_export_Countries.tsv', 'r') as country_file:
         countries = list(csv.reader(country_file, delimiter='\t'))[1:]
+
+    wca_ids = [registrations['wcaId'] for registrations in wca_json['persons'] if registrations['wcaId'] is not None]
+
+    # collect WCA ID information from WCA API
+    competitor_info = apis.get_wca_competitors(wca_ids)
         
     for registrations in tqdm.tqdm(wca_json['persons']):
         registered_events = ()
@@ -208,22 +213,18 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
         # scoresheets for consecutive rounds
         if not create_scoresheets_second_rounds_bool:
             if registrations['wcaId'] and registrations['registration']['status'] == 'accepted':
-                if not only_one_competitor:
-                    comp_count = apis.get_wca_competitor(registrations['wcaId'])['competition_count']
+                if not only_one_competitor or (only_one_competitor and registrations['wcaId'] == scoresheet_competitor_name):
+                    for competitor in competitor_info:
+                        if registrations['wcaId'] == competitor['person']['wca_id']:
+                            comp_count = competitor['competition_count']
+                            break
                     information.update(
                             {
                             'comp_count': comp_count,
                             'personal_bests': registrations['personalBests']
                             }
                         )
-                if only_one_competitor and registrations['wcaId'] == scoresheet_competitor_name:
-                    comp_count = apis.get_wca_competitor(registrations['wcaId'])['competition_count']
-                    information.update(
-                            {
-                            'comp_count': comp_count,
-                            'personal_bests': registrations['personalBests']
-                            }
-                        )
+
         if not registrations['wcaId']:
             information.update({'personId': ''})
         if registrations['registration']['status'] == 'accepted':
