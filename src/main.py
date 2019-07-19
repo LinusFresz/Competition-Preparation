@@ -10,10 +10,8 @@ import information_analysis as analysis
 import grouping_scrambling_functions as grouping_scrambling
 import pdf_file_generation as pdf_files
 
-
-
-import argparse
-
+### Parser
+# Parser arguments that can be added during script start
 parser = argparse.ArgumentParser(description='Give input to script to skip steps during run time')
 parser.add_argument('-m', '--mail', help='WCA account mail address')
 parser.add_argument('-o', '--option', help='Input any of the given options of script')
@@ -31,6 +29,7 @@ parser.add_argument('-cu', '--cubecomps', help='Cubecomps link to create scoresh
 
 parser_args = parser.parse_args()
 
+# catch input errors
 if parser_args.two_sided and not parser_args.no_two_sided:
     print('Creating and not creating back of nametags was selected. Setting default to false.')
     parser_args.two_sided = False
@@ -43,7 +42,6 @@ if parser_args.wca_registration and not parser_args.no_wca_registration:
     print('Use of WCA registration was selected as true AND false. Resetting values.')
     parser_args.wca_registration = None
     parser_args.no_wca_registration = None
-    
 
 ### Collection of booleans and variables for various different options from this script
 # Most of these are used globally
