@@ -294,6 +294,8 @@ def run_grouping_and_scrambling(group_list, result_string, registration_list, co
             if '%' in advancing_competitors:
                 competitors_in_event = int(int(advancing_competitors[:-1]) / 100 * competitors_in_event)
         else:
+            top_scrambler = 30 # arbitrary number
+            
             if advancing_competitors.isdigit():
                 min_scrambler = int(round(int(advancing_competitors) * 1.2, 0))
             else:
