@@ -25,21 +25,27 @@ def error_handling_wcif(competition_name, competition_page):
 
 ### Functions for handling WCA website related operations
 # Get file names for registration and grouping file if only scoresheets or nametags are created
-def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags, new_creation):
+def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags, new_creation, parser):
     file_name, grouping_file_name = '', ''
     if not wca_info:
-        file_name = get_file_name('registration')
+        file_name = get_file_name('registration', parser.registration_file)
     if two_sided_nametags or only_scoresheets:
-        grouping_file_name = get_file_name('grouping')
+        grouping_file_name = get_file_name('grouping', parser.grouping_file)
     return (file_name, grouping_file_name)
 
 # Get user input for wca login (mail-address, password and competition name)
 # All try-except cases were implemented for simple development and will not change the normal user input
-def wca_registration(new_creation):
+def wca_registration(new_creation, parser):
     print('')
     print('To get the competition information (such as events and schedule), please enter your WCA login credentials.')
     while True:
-        wca_mail = input('Your WCA mail address: ')
+        if parser.mail and "@" in parser.mail:
+            wca_mail = parser.mail
+        else:
+            if "@" not in parser.mail:
+                print('')
+                print('Input for mail was wrong in parser options. Please enter correct mail address manually.')
+            wca_mail = input('Your WCA mail address: ')
         # Validation if correct mail address was entered
         if '@' not in wca_mail:
             if wca_mail[:4].isdigit() and wca_mail[8:].isdigit():
@@ -60,20 +66,24 @@ def wca_registration(new_creation):
                 print('{}. {}'.format(counter, competition['name']))
                 counter += 1
         not_valid_competition_name = True
-        while(not_valid_competition_name):
-            competition_name = input('Competition name or ID: ')
+        while not_valid_competition_name:
+            if parser.competition:
+                competition_name = parser.competition
+            else:
+                competition_name = input('Competition name or ID: ')
             if competition_name.isdigit():
                 if int(competition_name) < len(upcoming_competitions):
                     competition_name = upcoming_competitions[int(competition_name)-1]['name'].replace('-', ' ')
                     not_valid_competition_name = False
                 else:
-                    print('Wrong input, please select number or enter competition name.')
+                    print('Wrong input, please select number or enter competition name/ID.')
             else:
                 try:
                     get_wca_competition(competition_name)['name']
                     not_valid_competition_name = False
                 except KeyError:
                     print('Competition {} not found on WCA website, please enter valid competition name.'.format(competition_name))
+                    parser.competition = ''
 
         create_competition_folder(competition_name)
         competition_name_stripped = competition_name.replace(' ', '')
@@ -284,14 +294,20 @@ def get_information(information_string):
         return False
 
 # Get registration/grouping/scrambling file if it is in .csv. or .txt format
-def get_file_name(id):
+def get_file_name(id, file_name_parser):
     while True:
-        file_name = input('Enter {}-file name: '.format(id))
+        if file_name_parser:
+            file_name = file_name_parser
+        else:
+            file_name = input('Enter {}-file name: '.format(id))
         file_name = file_name.replace('.csv', '').replace('.txt', '')
         file_name_csv = '{}.csv'.format(file_name)
         file_name_txt = '{}.txt'.format(file_name)
         if not os.path.isfile(file_name_csv) and not os.path.isfile(file_name_txt):
             print('File {} or {} not found. Please enter valid file name.'.format(file_name_txt, file_name_csv))
+            if file_name_parser:
+                print('False input in parser. Please enter file name manually.')
+                file_name_parser = ''
         else:
             break
     if os.path.isfile(file_name_txt):
