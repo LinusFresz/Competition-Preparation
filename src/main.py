@@ -12,20 +12,21 @@ import pdf_file_generation as pdf_files
 
 ### Parser
 # Parser arguments that can be added during script start
-parser = argparse.ArgumentParser(description='Give input to script to skip steps during run time')
-parser.add_argument('-m', '--mail', help='WCA account mail address which is used for login')
-parser.add_argument('-o', '--option', help='Input any of the given options of script')
+parser = argparse.ArgumentParser(description='Give input to script to skip steps during run time.')
+parser.add_argument('-m', '--mail', help='WCA account mail address which is used for login.')
+parser.add_argument('-o', '--option', help='Input any of the given options of script.')
 parser.add_argument('-wreg', '--wca_registration', action='store_true', help='Boolean. Did competition use WCA registration?')
 parser.add_argument('-nwreg', '--no_wca_registration', action='store_false', help='Boolean. Did competition NOT use WCA registration?')
 parser.add_argument('-c', '--competition', help='Competition name')
-parser.add_argument('-t', '--two_sided', action='store_true', help='Boolean. Specify, if back of nametags should be created (with grouping and scrambling information)')
-parser.add_argument('-nt', '--no_two_sided', action='store_false', help='Boolean. Specify, if back of nametags should NOT be created')
-parser.add_argument('-ssig', '--scrambler_signature', action='store_true', help='Boolean. Specify, if scrambler signature field should be put on scoresheets')
-parser.add_argument('-nssig', '--no_scrambler_signature', action='store_false', help='Boolean. Specify, if scrambler signature field should NOT be put on scoresheets')
-parser.add_argument('-r', '--registration_file', help='Name of registration file if WCA registration was not used')
+parser.add_argument('-t', '--two_sided', action='store_true', help='Boolean. Specify, if back of nametags should be created (with grouping and scrambling information).')
+parser.add_argument('-nt', '--no_two_sided', action='store_false', help='Boolean. Specify, if back of nametags should NOT be created.')
+parser.add_argument('-ssig', '--scrambler_signature', action='store_true', help='Boolean. Specify, if scrambler signature field should be put on scoresheets.')
+parser.add_argument('-nssig', '--no_scrambler_signature', action='store_false', help='Boolean. Specify, if scrambler signature field should NOT be put on scoresheets.')
+parser.add_argument('-r', '--registration_file', help='Name of registration file if WCA registration was not used.')
 parser.add_argument('-g', '--grouping_file', help='Name of grouping file. For options 5, 7 and 8.')
 parser.add_argument('-s', '--scrambling_file', help='Name of scrambling file. For option 5.')
 parser.add_argument('-cu', '--cubecomps', help='Cubecomps link to create scoresheets of consecutive rounds.')
+parser.add_argument('-a', '--use_access_token', action='store_true', help='If script has been used before, an access token to the WCA API will be saved. This token can be reused.')
 
 parser_args = parser.parse_args()
 
@@ -66,6 +67,26 @@ event_ids = {
         'clock': 999, 'skewb': 999, 'sq1': 999, '444bf': 999,
         '555bf': 999, '333mbf': 999
         }
+        
+
+access_token_found = False
+if parser_args.use_access_token:
+    try:
+        with open('.secret', 'r') as secret:
+            secret_text = secret.read()
+            secret_time = datetime.datetime.strptime(secret_text.split('token:')[0].strip(), '%Y-%m-%d %H:%M:%S.%f')
+            parser_args.access_token = secret_text.split('token:')[1].split('refresh_')[0].strip()
+            refresh_token = secret_text.split('refresh_token:')[1].strip()
+            access_token_found = True
+
+        if (secret_time - datetime.datetime.now()) > datetime.timedelta(hours=2):
+            apis.wca_api_get_new_token(refresh_token)
+    except FileNotFoundError:
+        print('')
+        print('INFO! No access token from previous runs was found. Fallback to use WCA mail address and password.')
+        parser_args.use_access_token = False
+    
+        
 
 ### Selection of script functions
 while True:
@@ -126,6 +147,10 @@ while True:
     print('Wrong input, please enter one of the available options.\n')
 
 
+if access_token_found:
+    if not parser_args.use_access_token:
+        use_access_token = apis.get_information('An access token from a previous run of this script was found. Would you like to use this one to proceed? (No password input will be necessary)')
+
 ### Evaluation of script selection and initialization
 # Get necessary information for new competition
 if new_creation or create_only_nametags:
@@ -135,7 +160,10 @@ if new_creation or create_only_nametags:
         wca_info = apis.get_information('Used WCA registration for this competition? (y/n) ')
     if wca_info:
         print('Using WCA registration information.')
-    wca_password, wca_mail, competition_name, competition_name_stripped = apis.wca_registration(True, parser_args)
+    if not parser_args.use_access_token:
+        wca_password, wca_mail, competition_name, competition_name_stripped = apis.wca_registration(True, parser_args)
+    else:
+        competition_name, competition_name_stripped = apis.wca_registration(True, parser_args)
     if not create_only_registration_file:
         if parser_args.two_sided or not parser_args.no_two_sided:
             two_sided_nametags = parser_args.two_sided
@@ -175,7 +203,10 @@ if new_creation or create_only_nametags:
     if create_only_nametags and not two_sided_nametags and not wca_info:
         pass
     else:
-        competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
+        if not parser_args.use_access_token:
+            competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, wca_password, wca_mail)
+        else:
+            competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, parser_args.access_token)
 
     print('Saved registration information from WCA website, extracting data now and collect relevant information...')
 
@@ -210,7 +241,10 @@ elif reading_grouping_from_file_bool:
         except KeyError:
             pass
     file_name, grouping_file_name = apis.competition_information_fetch(wca_info, True, False, new_creation, parser_args)
-    competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
+    if not parser_args.use_access_token:
+        competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, wca_password, wca_mail)
+    else:
+        competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, parser_args.access_token)
     
     competitors_api, cubecomps_id, use_cubecomps_ids = apis.get_cubecomps_competition(create_only_nametags, competition_name, competition_name_stripped)
 
@@ -223,11 +257,17 @@ elif create_only_schedule:
     if wca_info:
         print('Using WCA website information.')
 
-    wca_password, wca_mail, competition_name, competition_name_stripped = apis.wca_registration(True, parser_args)
+    if not parser_args.use_access_token:
+        wca_password, wca_mail, competition_name, competition_name_stripped = apis.wca_registration(True, parser_args)
+    else:
+        competition_name, competition_name_stripped = apis.wca_registration(True, parser_args)
     two_sided_nametags = False
     
     file_name, grouping_file_name = apis.competition_information_fetch(wca_info, False, two_sided_nametags, new_creation, parser_args)
-    competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
+    if not parser_args.use_access_token:
+        competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, wca_password, wca_mail)
+    else:
+        competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, parser_args.access_token)
 
 # Create scoresheets for seconds rounds by using cubecomps.com information
 elif create_scoresheets_second_rounds_bool:
@@ -266,7 +306,9 @@ elif create_scoresheets_second_rounds_bool:
             )
     event_round_name = next_round_name.replace(' 4', '')
 
-    wca_password, wca_mail = apis.wca_registration(new_creation, parser_args)
+    if not parser_args.use_access_token:
+        wca_password, wca_mail = apis.wca_registration(new_creation, parser_args)
+
     if parser_args.wca_registration or not parser_args.no_wca_registration:
         wca_info = parser_args.wca_registration
     else:
@@ -279,7 +321,10 @@ elif create_scoresheets_second_rounds_bool:
         scrambler_signature = apis.get_information('Add scrambler signature field to scorecards? (y/n)')
     file_name, grouping_file_name = apis.competition_information_fetch(wca_info, False, False, new_creation, parser_args)
 
-    competition_wcif_file = apis.get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped)
+    if not parser_args.use_access_token:
+        competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, wca_password, wca_mail)
+    else:
+        competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, parser_args.access_token)
 
 ### Get all information from wca competition (using WCIF) and collection information from WCA database export
 if get_registration_information:

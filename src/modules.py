@@ -7,10 +7,10 @@ import csv
 import json
 import getpass
 import glob
+import math
 import os
 import random
 import sys
-import math
 
 # Added modules
 import datetime

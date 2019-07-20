@@ -38,27 +38,31 @@ def competition_information_fetch(wca_info, only_scoresheets, two_sided_nametags
 def wca_registration(new_creation, parser):
     print('')
     print('To get the competition information (such as events and schedule), please enter your WCA login credentials.')
-    while True:
-        if parser.mail and "@" in parser.mail:
-            wca_mail = parser.mail
-        else:
-            if "@" not in parser.mail:
-                print('')
-                print('Input for mail was wrong in parser options. Please enter correct mail address manually.')
-            wca_mail = input('Your WCA mail address: ')
-        # Validation if correct mail address was entered
-        if '@' not in wca_mail:
-            if wca_mail[:4].isdigit() and wca_mail[8:].isdigit():
-                print('Please enter your WCA account email address instead of WCA ID.')
+    if not parser.use_access_token:
+        while True:
+            if parser.mail and "@" in parser.mail:
+                wca_mail = parser.mail
             else:
-                print('Please enter valid email address.')
-        else:
-            break
-    wca_password = getpass.getpass('Your WCA password: ')
+                if parser.mail and "@" not in parser.mail:
+                    print('')
+                    print('Input for mail was wrong in parser options. Please enter correct mail address manually.')
+                wca_mail = input('Your WCA mail address: ')
+            # Validation if correct mail address was entered
+            if '@' not in wca_mail:
+                if wca_mail[:4].isdigit() and wca_mail[8:].isdigit():
+                    print('Please enter your WCA account email address instead of WCA ID.')
+                else:
+                    print('Please enter valid email address.')
+            else:
+                break
+        wca_password = getpass.getpass('Your WCA password: ')
     
     if new_creation:
         print('Getting upcoming competitions from WCA website...')
-        upcoming_competitions = sorted(json.loads(get_upcoming_wca_competitions(wca_password, wca_mail)), key=lambda x:x['start_date'])
+        if not parser.use_access_token:
+            upcoming_competitions = sorted(json.loads(get_upcoming_wca_competitions(wca_password, wca_mail)), key=lambda x:x['start_date'])
+        else:
+            upcoming_competitions = sorted(json.loads(get_upcoming_wca_competitions(parser.access_token)), key=lambda x:x['start_date'])
         counter = 1
         if upcoming_competitions:
             print('Please select competition (by number) or enter competition name:')
@@ -87,19 +91,29 @@ def wca_registration(new_creation, parser):
 
         create_competition_folder(competition_name)
         competition_name_stripped = competition_name.replace(' ', '')
-        return (wca_password, wca_mail, competition_name, competition_name_stripped)
+        if not parser.use_access_token:
+            return (wca_password, wca_mail, competition_name, competition_name_stripped)
+        else:
+            return (competition_name, competition_name_stripped)
     return (wca_password, wca_mail)
 
 ### WCA API
 # Use given input from function wca_registration to access competition WCIF
 # Further information can be found here:
 # https://github.com/thewca/worldcubeassociation.org/wiki/OAuth-documentation-notes
-def get_wca_info(wca_password, wca_mail, competition_name, competition_name_stripped):
+def get_wca_info(competition_name, competition_name_stripped, *args):
     print('Fetching information from WCA competition website...')
     url = 'https://www.worldcubeassociation.org/api/v0/competitions/{}/wcif'.format(competition_name_stripped)
     
-    competition_wcif_info = wca_api(url, wca_mail, wca_password)
-
+    if len(args) == 2:
+        wca_password = args[0]
+        wca_mail = args[1]
+    
+        competition_wcif_info = wca_api(url, wca_mail, wca_password)
+    else:
+        access_token = args[0]
+        competition_wcif_info = wca_api(url, access_token)
+        
     # Error handling for wrong WCA website information and file-save if successful information fetch
     error_handling_wcif(competition_name, competition_wcif_info.text)
     
@@ -153,31 +167,58 @@ def get_wca_competition(competition_name):
     return competition_info
 
 # Get upcoming competitions of user
-def get_upcoming_wca_competitions(wca_password, wca_mail):
+def get_upcoming_wca_competitions(*args):
     start_date = str(datetime.datetime.today()).split()[0]
     url = 'https://www.worldcubeassociation.org/api/v0/competitions?managed_by_me=true&start={}'.format(start_date)
     
-    competition_wcif_info = wca_api(url, wca_mail, wca_password)
+    if len(args) == 2:
+        wca_password = args[0]
+        wca_mail = args[1]
+        competition_wcif_info = wca_api(url, wca_mail, wca_password)
+    else:
+        access_token = args[0]
+        competition_wcif_info = wca_api(url, access_token)
     
     return competition_wcif_info.text
 
 # Function to actually talk to WCA API and collect response information
-def wca_api(request_url, wca_mail, wca_password):
+def wca_api(request_url, *args):
     grant_url = 'https://www.worldcubeassociation.org/oauth/token'
-    wca_headers = {'grant_type':'password', 'username':wca_mail, 'password':wca_password, 'scope':'public manage_competitions'}
-    wca_request_token = requests.post(grant_url, data=wca_headers)
-    try:
-        wca_access_token = json.loads(wca_request_token.text)['access_token']
-        with open('.secret', 'w') as secret:
-            print(wca_access_token, file=secret)
-    except KeyError:
-        print('ERROR!! Failed to get competition information.\n\n Given error message: {}\n Message:{}\n\nScript aborted.'.format(json.loads(wca_request_token.text)['error'], json.loads(wca_request_token.text)['error_description']))
-        sys.exit()
+    
+    if len(args) == 2:
+        wca_password = args[1]
+        wca_mail = args[0]
+        wca_headers = {'grant_type':'password', 'username':wca_mail, 'password':wca_password, 'scope':'public manage_competitions'}
+        wca_request_token = requests.post(grant_url, data=wca_headers)
+        try:
+            wca_access_token = json.loads(wca_request_token.text)['access_token']
+            wca_refresh_token = json.loads(wca_request_token.text)['refresh_token']
+            with open('.secret', 'w') as secret:
+                print(str(datetime.datetime.now()) + ' token:' + wca_access_token + ' refresh_token:' + wca_refresh_token, file=secret)
+        except KeyError:
+            print('ERROR!! Failed to get competition information.\n\n Given error message: {}\n Message:{}\n\nScript aborted.'.format(json.loads(wca_request_token.text)['error'],  json.loads(wca_request_token.text)['error_description']))
+            sys.exit()
+    else:
+        wca_access_token = args[0]
+    
     wca_authorization = 'Bearer ' + wca_access_token
     wca_headers2 = {'Authorization': wca_authorization}
     competition_wcif_info = requests.get(request_url, headers=wca_headers2)
 
     return competition_wcif_info
+    
+def wca_api_get_new_token(refresh_token):
+    grant_url = 'https://www.worldcubeassociation.org/oauth/token'
+    wca_headers = {'grant_type':'refresh_token', 'refresh_token':refresh_token, 'scope':'public manage_competitions'}
+    wca_request_token = requests.post(grant_url, data=wca_headers)
+    
+    try:
+        wca_access_token = json.loads(wca_request_token.text)['access_token']
+        wca_refresh_token = json.loads(wca_request_token.text)['refresh_token']
+        with open('.secret', 'w') as secret:
+            print(str(datetime.datetime.now()) + ' token:' + wca_access_token + ' refresh_token:' + wca_refresh_token, file=secret)
+    except KeyError:
+        print('ERROR!! Failed to get competition information.\n\n Given error message: {}\n Message:{}\n\nScript aborted.'.format(json.loads(wca_request_token.text)['error'], json.loads(wca_request_token.text)['error_description']))
 
 ### Cubecomps API
 # API to collect competitor information
