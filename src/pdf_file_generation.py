@@ -179,8 +179,8 @@ def create_scoresheets(competition_name, competition_name_stripped, result_strin
             counter = 0
             result_string_sorted_events = result_string
             
-            if event['event'] in grouping_scrambling.events_ranking_by_speed:
-                result_string_sorted_events = sorted(result_string, key=lambda x:x[event_ids[event['event']]])
+            result_string_sorted_events = sorted(result_string, key=lambda x:x[event_ids[event['event']]])
+        
             for name in result_string_sorted_events:
                 if str(name[event_ids[event['event']]]).isdigit():
                     scoresheet_list.append(name)
@@ -597,7 +597,7 @@ def write_scoresheets(label, width, height, information):
     competitor_name, registration_id, id = '', '', ''
 
     for person in competitor_information:
-        if (name[2] and ftfy.fix_text(name[2]) == ftfy.fix_text(person['personId'])) or (ftfy.fix_text(name[0]) == ftfy.fix_text(person['name'])):
+        if (name[2] and (ftfy.fix_text(name[2]) == ftfy.fix_text(person['personId']))) or (not name[2] and ftfy.fix_text(name[0]) == ftfy.fix_text(person['name'])):
             competitor_name = person['name']
             registration_id = str(person['registration_id'])
             id = person['personId']
@@ -605,6 +605,7 @@ def write_scoresheets(label, width, height, information):
                 id = 'New Competitor'
             else:
                 id = '     {}'.format(id)
+            break
     
     helper_scoresheets.scoresheet_competitor_and_competition_name(competitor_name, competition_name, label, height, width)
 

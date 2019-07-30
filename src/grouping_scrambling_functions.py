@@ -6,9 +6,8 @@ import apis
 import helpers.helpers as helper
 
 events_ranking_by_speed = (
-        '222', '333', '444',
-        '333oh', '333bf', '333ft',
-        'pyram', 'skewb'
+        '555', '666', '777',
+        '333bf', 'minx', '444'
         )
 
 ### Grouping for all events with given number of groups
