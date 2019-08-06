@@ -252,8 +252,6 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
             else:
                 competitor_information_wca.append(information)
             registration_id += 1
-
-    quit()
     return competitor_information_wca
 
 # Parse information about event_id, round_number, # groups, format, cutoff, time limit and (possible) cumulative limits for each event
