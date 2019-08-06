@@ -115,7 +115,6 @@ def get_registration_from_file(wca_json, file_name, new_creation, reading_groupi
 
 ### Read in grouping file if needed for nametags/scoresheets
 def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_competitor, scoresheet_competitor_name):
-    first_time = True
     result_string = []
     with open(grouping_file_name, 'r', encoding='utf8') as f:
         reader = csv.reader(f)
@@ -132,12 +131,6 @@ def get_grouping_from_file(grouping_file_name, event_dict, event_ids, only_one_c
         if file_information[person][0] and 'Name' not in file_information[person][1]:
             file_information[person][0] = file_information[person][1]
             file_information[person].insert(2, '')
-            if "Anatoly" in file_information[person][1]:
-                if first_time:
-                    file_information[person][2] = "2018TURE01"
-                    first_time = False
-                else:
-                    file_information[person][2] = "2019TURE01"
             result_string.append(file_information[person])
             if only_one_competitor:
                 if ftfy.fix_text(scoresheet_competitor_name) == ftfy.fix_text(file_information[person][0]):
@@ -249,12 +242,9 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
             elif use_cubecomps_ids:
                 for comp in competitors_api:
                     if registrations['name'].split(' (')[0].strip() == ftfy.fix_text(comp['name']).split(' (')[0]:
-                        registration_id = comp['competitor_id']
-                        if registrations['wcaId'] == "2018TURE01":
-                            registration_id = 108
                         information.update(
                                     {
-                                    'registration_id': registration_id
+                                    'registration_id': comp['competitor_id']
                                     }
                                 )
                         competitor_information_wca.append(information)
@@ -263,6 +253,7 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
                 competitor_information_wca.append(information)
             registration_id += 1
 
+    quit()
     return competitor_information_wca
 
 # Parse information about event_id, round_number, # groups, format, cutoff, time limit and (possible) cumulative limits for each event
