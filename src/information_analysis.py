@@ -203,7 +203,7 @@ def get_registrations_from_wcif(wca_json, create_scoresheets_second_rounds_bool,
                 'role': competitor_role, 
                 'guests': str(registrations['registration']['guests']), 
                 'registered_events': registered_events, 
-                'registration_id': registration_id,
+                'registration_id': registrations['registrantId'],
                 'single': str(single),
                 'average': str(average),
                 'comp_count': 0
