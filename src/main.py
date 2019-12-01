@@ -172,7 +172,7 @@ if new_creation or create_only_nametags:
         if two_sided_nametags:
             print('Using WCA registration and event information for competition {}.'.format(competition_name))
             
-        competitors_api, cubecomps_id, use_cubecomps_ids = apis.get_cubecomps_competition(create_only_nametags, competition_name, competition_name_stripped)
+        competitors_api, cubecomps_id, use_cubecomps_ids = apis.get_wcalive_competition(create_only_nametags, competition_name, competition_name_stripped)
             
         if not create_only_nametags:
             if parser_args.scrambler_signature or not parser_args.no_scrambler_signature:
@@ -246,7 +246,7 @@ elif reading_grouping_from_file_bool:
     else:
         competition_wcif_file = apis.get_wca_info(competition_name, competition_name_stripped, parser_args.access_token)
     
-    competitors_api, cubecomps_id, use_cubecomps_ids = apis.get_cubecomps_competition(create_only_nametags, competition_name, competition_name_stripped)
+    competitors_api, cubecomps_id, use_cubecomps_ids = apis.get_wcalive_competition(create_only_nametags, competition_name, competition_name_stripped)
 
 # Create schedule from wca website information
 elif create_only_schedule:
@@ -276,7 +276,7 @@ elif create_scoresheets_second_rounds_bool:
         cubecomps_id = parser_args.cubecomps
     else:
         cubecomps_id = input('Link to previous round: ')
-    cubecomps_api, competitors, event_round_name, advancing_competitors_next_round, competition_name, competition_name_stripped = apis.get_round_information_from_cubecomps(cubecomps_id)
+    cubecomps_api, competitors, event_round_name, advancing_competitors_next_round, competition_name, competition_name_stripped = apis.get_round_information_from_wcalive(cubecomps_id)
     
     event_2 = event_round_name.split(' - ')[0].replace(' Cube', '')
     event_2 = list(event_dict.keys())[list(event_dict.values()).index(event_2)]
